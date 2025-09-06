@@ -1,0 +1,23 @@
+{
+  "name": "coway-promotion-scraper",
+  "version": "1.0.0",
+  "description": "코웨이 프로모션 자동 스크래핑 시스템",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node scraper.js",
+    "test": "echo \"스크래핑 테스트 실행...\" && node scraper.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "axios": "^1.5.0"
+  },
+  "keywords": [
+    "coway",
+    "promotion",
+    "scraping",
+    "automation"
+  ],
+  "author": "Auto Scraper",
+  "license": "MIT"
+}
