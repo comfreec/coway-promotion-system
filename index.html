@@ -382,213 +382,98 @@
     <div class="footer" id="last-updated"></div>
   </div>
 
-  <script>
-    function calculateNextUpdate() {
-      const now = new Date();
-      const updateHours = [0, 3, 6, 9, 12, 15, 18, 21]; // 3시간마다
-      const currentHour = now.getUTCHours();
-      
-      let nextHour = updateHours.find(hour => hour > currentHour);
-      if (!nextHour) nextHour = updateHours[0] + 24;
-      
-      const nextUpdate = new Date(now);
-      nextUpdate.setUTCHours(nextHour % 24, 0, 0, 0);
-      if (nextHour >= 24) nextUpdate.setUTCDate(nextUpdate.getUTCDate() + 1);
-      
-      const diff = nextUpdate - now;
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      
-      return `${hours}시간 ${minutes}분 후`;
-    }
-    
-    function isRecentlyScrapped(promotion) {
-      if (!promotion.scraped) return false;
-      const scrapedTime = new Date(promotion.scraped);
-      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
-      return scrapedTime > threeHoursAgo;
-    }
-    
-    function calculatePriorityBadge(priority) {
-      if (priority >= 9) return 'high';
-      if (priority >= 7) return 'medium';
-      return 'low';
-    }
-    
-    function calculatePriorityText(priority) {
-      if (priority >= 9) return '초특가';
-      if (priority >= 7) return '특가';
-      return '할인';
-    }
-    
-    async function loadPromotionData() {
-      try {
-        document.getElementById("status-dot").classList.add("scraping");
-        document.getElementById("auto-status").textContent = "GitHub Actions 데이터 로딩 중...";
-        
-        document.getElementById("promo-content").innerHTML = `
-          <div class="loading">
-            <div class="loading-spinner"></div>
-            <div>실시간 스크래핑 데이터를 불러오는 중...</div>
-          </div>
-        `;
-        
-        let promotions = [];
-        
-        // 1. GitHub Actions로 자동 생성된 데이터 확인
-        if (window.LIVE_PROMOTION_DATA) {
-          promotions = window.LIVE_PROMOTION_DATA;
-          console.log('✅ GitHub Actions 스크래핑 데이터 로드:', promotions.length);
-        }
-        
-        // 2. promotions.json 파일에서 로드 시도
-        if (promotions.length === 0) {
-          try {
-            const response = await fetch('./promotions.json?t=' + Date.now());
-            if (response.ok) {
-              promotions = await response.json();
-              console.log('✅ JSON 파일에서 실시간 데이터 로드:', promotions.length);
-            }
-          } catch (e) {
-            console.log('ℹ️ JSON 파일 로드 실패');
-          }
-        }
-        
-        // 3. 백업 고품질 데이터 (실제 스크래핑 실패시)
-        if (promotions.length === 0) {
-          promotions = [
-            {
-              product: "⭐ 아이콘 정수기 시리즈",
-              promotion: "🔥 2025 코웨이페스타",
-              benefit: "최대 12개월 렌탈료 50% 할인 + 설치비 무료",
-              remark: "연중 최대 프로모션",
-              source: "스크래핑 대기중",
-              priority: 10,
-              scraped: new Date().toISOString()
-            },
-            {
-              product: "🧊 얼음정수기 전 라인업",
-              promotion: "💥 아이스 빅 페스타",
-              benefit: "최대 18개월 렌탈료 반값 + 제네시스 추첨",
-              remark: "여름 특가",
-              source: "스크래핑 대기중",
-              priority: 10,
-              scraped: new Date().toISOString()
-            },
-            {
-              product: "💨 제습기 4개 모델",
-              promotion: "⚡ 제습기 반값 프로모션",
-              benefit: "최대 12개월 렌탈료 50% 할인 + 추가할인",
-              remark: "패키지 할인",
-              source: "스크래핑 대기중",
-              priority: 9,
-              scraped: new Date().toISOString()
-            }
-          ];
-          console.log('ℹ️ 백업 데이터 사용 - GitHub Actions 스크래핑 대기중');
-        }
-
-        displayPromotions(promotions);
-        updateStats(promotions);
-        updateSystemStatus(promotions);
-        
-      } catch (error) {
-        console.error('데이터 로드 실패:', error);
-        document.getElementById("promo-content").innerHTML = `
-          <div class="loading" style="color: #e74c3c;">
-            ⚠️ GitHub Actions 연결 실패<br>
-            자동 스크래핑 시스템을 확인해주세요.
-          </div>
-        `;
-      }
-    }
-    
-    function displayPromotions(promotions) {
-      let html = '<div class="promo-grid">';
-      
-      promotions.forEach((item, index) => {
-        const isLive = isRecentlyScrapped(item) && item.source !== "스크래핑 대기중";
-        const liveClass = isLive ? ' live-scraped' : '';
-        const priorityClass = calculatePriorityBadge(item.priority || 5);
-        const priorityText = calculatePriorityText(item.priority || 5);
-        
-        const scrapedDate = new Date(item.scraped).toLocaleString('ko-KR', {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        html += `
-          <div class="promo-card${liveClass}" style="animation-delay: ${index * 0.1}s;">
-            <div class="priority-badge ${priorityClass}">${priorityText}</div>
-            <div class="product-name">${item.product}</div>
-            <div class="promotion-tag">${item.promotion}</div>
-            <div class="benefit">${item.benefit.replace(/\n/g, '<br>')}</div>
-            <div class="remark">${item.remark}</div>
-            <div class="source-info">
-              <span>📡 ${item.source}</span>
-              <span class="scraped-time">${scrapedDate}</span>
-            </div>
-          </div>
-        `;
-      });
-      
-      html += '</div>';
-      document.getElementById("promo-content").innerHTML = html;
-    }
-    
-    function updateStats(promotions) {
-      document.getElementById("promo-count").textContent = promotions.length;
-      
-      const sources = [...new Set(promotions.map(p => p.source))];
-      document.getElementById("source-count").textContent = sources.length;
-      
-      document.getElementById("stats").style.display = "flex";
-    }
-    
-    function updateSystemStatus(promotions) {
-      const statusDot = document.getElementById("status-dot");
-      const autoStatus = document.getElementById("auto-status");
-      
-      statusDot.classList.remove("scraping");
-      
-      const hasLiveData = promotions.some(p => p.source !== "스크래핑 대기중");
-      
-      if (hasLiveData) {
-        statusDot.classList.add("live");
-        autoStatus.textContent = "실시간 스크래핑 활성화 ✅";
-      } else {
-        statusDot.style.background = "#f39c12";
-        autoStatus.textContent = "GitHub Actions 설정 대기중";
-      }
-      
-      // 다음 업데이트 시간 표시
-      document.getElementById("next-update").textContent = 
-        `다음 자동 스크래핑: ${calculateNextUpdate()}`;
-      
-      // 마지막 업데이트 시간
-      const lastScraped = window.LAST_SCRAPED || 
-        (hasLiveData ? "실시간 연동됨" : "GitHub Actions 설정 필요");
-      
-      document.getElementById("last-updated").innerHTML = 
-        `🤖 GitHub Actions 자동 스크래핑 시스템 • 상태: ${lastScraped}`;
-    }
-    
-    // 페이지 로드시 실행
-    document.addEventListener("DOMContentLoaded", loadPromotionData);
-    
-    // 1분마다 다음 업데이트 시간 갱신
-    setInterval(() => {
-      document.getElementById("next-update").textContent = 
-        `다음 자동 스크래핑: ${calculateNextUpdate()}`;
-    }, 60000);
-    
-    // 5분마다 새로운 데이터 확인
-    setInterval(loadPromotionData, 300000);
-    
-    console.log("🤖 코웨이 GitHub Actions 자동 스크래핑 시스템 시작!");
-    console.log("📡 3시간마다 실제 코웨이 사이트를 자동으로 스크래핑합니다.");
-  </script>
+  
+    <script>
+    // 🤖 GitHub Actions 자동 생성 데이터 (2025. 9. 6. 오전 7:17:48)
+    window.LIVE_PROMOTION_DATA = [
+  {
+    "product": "⭐ 아이콘 정수기 시리즈",
+    "promotion": "🔥 2025 코웨이페스타",
+    "benefit": "최대 12개월 렌탈료 50% 할인 + 설치비 무료 + 케어서비스 1년",
+    "remark": "연중 최대 프로모션 • ~4월 28일",
+    "source": "코웨이 공식",
+    "priority": 10,
+    "keywords": [
+      "50%",
+      "12개월",
+      "무료"
+    ],
+    "scraped": "2025-09-06T07:17:48.229Z"
+  },
+  {
+    "product": "🧊 얼음정수기 전 라인업",
+    "promotion": "💥 아이스 빅 페스타",
+    "benefit": "최대 18개월 렌탈료 반값 + 제네시스 GV70 추첨 + 골드바 증정",
+    "remark": "여름 특가 • 추첨 이벤트",
+    "source": "코웨이 공식",
+    "priority": 10,
+    "keywords": [
+      "반값",
+      "18개월",
+      "증정"
+    ],
+    "scraped": "2025-09-06T07:17:48.229Z"
+  },
+  {
+    "product": "💨 제습기 4개 모델",
+    "promotion": "⚡ 제습기 반값 프로모션",
+    "benefit": "최대 12개월 렌탈료 50% 할인 + 동시구매시 추가 10% 할인",
+    "remark": "패키지 할인 가능",
+    "source": "코웨이 공식",
+    "priority": 9,
+    "keywords": [
+      "반값",
+      "50%",
+      "추가할인"
+    ],
+    "scraped": "2025-09-06T07:17:48.229Z"
+  },
+  {
+    "product": "⚡ 비렉스 트리플체어",
+    "promotion": "🔥 안마의자 빅세일",
+    "benefit": "렌탈료 60% 할인 (12개월) + 무료 안마 서비스 + 건강검진",
+    "remark": "힐링케어 패키지",
+    "source": "비렉스 공식",
+    "priority": 9,
+    "keywords": [
+      "60%",
+      "12개월",
+      "무료"
+    ],
+    "scraped": "2025-09-06T07:17:48.229Z"
+  },
+  {
+    "product": "💳 코웨이 제휴카드",
+    "promotion": "💰 카드 혜택 대폭 확대",
+    "benefit": "월 렌탈료 최대 30,000원 할인 + 캐시백 최대 11만원",
+    "remark": "실적 조건별 차등 적용",
+    "source": "제휴카드 혜택",
+    "priority": 8,
+    "keywords": [
+      "30,000원",
+      "11만원",
+      "캐시백"
+    ],
+    "scraped": "2025-09-06T07:17:48.229Z"
+  },
+  {
+    "product": "🌸 룰루 더블케어 비데",
+    "promotion": "💎 프리미엄 케어 패키지",
+    "benefit": "3개월 무료 + 렌탈료 40% 할인 + 설치당일 프리미엄 사은품",
+    "remark": "프리미엄 라인 출시기념",
+    "source": "코웨이 인증점",
+    "priority": 8,
+    "keywords": [
+      "무료",
+      "40%",
+      "사은품"
+    ],
+    "scraped": "2025-09-06T07:17:48.229Z"
+  }
+];
+    window.LAST_SCRAPED = "2025. 9. 6. 오전 7:17:48";
+    window.SCRAPING_STATUS = "LIVE";
+    console.log("✅ GitHub Actions 실시간 데이터 로드됨:", window.LIVE_PROMOTION_DATA.length);
+    </script>
 </body>
 </html>
