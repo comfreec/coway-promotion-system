@@ -1,0 +1,6 @@
+# .github/workflows/scrape-promotions.yml
+name: 코웨이 프로모션 자동 스크래핑
+
+on:
+  schedule:
+    # 매일 3시간마다 실행 (KST: 09
