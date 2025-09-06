@@ -1,4 +1,4 @@
-// scraper.js - 코웨이 프로모션 자동 스크래핑 (수정본)
+// scraper.js - 코웨이 프로모션 자동 스크래핑 (waitForSelector 안정화 버전)
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
@@ -36,29 +36,32 @@ async function scrapePromotions() {
   
   for (const target of SCRAPE_TARGETS) {
     try {
-      console.log(`${target.name} 스크래핑 중...`);
+      console.log(`=== ${target.name} 스크래핑 시작 ===`);
       
       const page = await browser.newPage();
       await page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       );
-      
+
+      console.log(`[${target.name}] 페이지 이동 중...`);
       await page.goto(target.url, { 
-        waitUntil: 'domcontentloaded', // networkidle2 → domcontentloaded
-        timeout: 15000 // 30초 → 15초
+        waitUntil: 'domcontentloaded',
+        timeout: 15000
       });
-      console.log(`${target.name} page.goto 완료`);
-      
-      await page.waitForTimeout(2000); // 짧게 대기
-      console.log(`${target.name} page.evaluate 시작`);
-      
+      console.log(`[${target.name}] 페이지 로드 완료`);
+
+      // 프로모션 영역이 뜰 때까지 대기
+      console.log(`[${target.name}] selector 대기: ${target.selector}`);
+      await page.waitForSelector(target.selector, { timeout: 10000 });
+      console.log(`[${target.name}] selector 감지 완료`);
+
       const promotions = await page.evaluate((selector, targetName) => {
         const items = document.querySelectorAll(selector);
         const results = [];
-        
+
         items.forEach((item, index) => {
           if (index >= 5) return; // 5개까지만
-        
+
           const text = item.innerText || item.textContent || '';
           const promoKeywords = ['할인', '프로모션', '이벤트', '특가', '무료', '증정', '혜택', '반값'];
           const hasPromoKeyword = promoKeywords.some(keyword => text.includes(keyword));
@@ -108,15 +111,14 @@ async function scrapePromotions() {
             });
           }
         });
-        
+
         return results;
       }, target.selector, target.name);
-      
-      console.log(`${target.name} page.evaluate 완료, ${promotions.length}개 발견`);
-      
+
+      console.log(`[${target.name}] ${promotions.length}개 프로모션 발견`);
       allPromotions.push(...promotions);
       await page.close();
-      
+
     } catch (error) {
       console.error(`${target.name} 스크래핑 실패:`, error.message);
     }
