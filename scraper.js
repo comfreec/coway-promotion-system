@@ -1,4 +1,4 @@
-// scraper.js - 코웨이 프로모션 자동 스크래핑 (강화 버전)
+// scraper.js - 코웨이 프로모션 자동 스크래핑 (무한로딩 방지 강화 버전)
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
@@ -49,29 +49,20 @@ const SCRAPE_TARGETS = [
   }
 ];
 
-// 고객이 좋아하는 프로모션 키워드 (할인율 높은 것 우선)
+// 고객이 좋아하는 프로모션 키워드
 const HIGH_VALUE_KEYWORDS = [
-  // 할인 관련 (높은 할인율 우선)
   { keywords: ['반값', '50%', '반가격'], priority: 10, emoji: '🔥' },
   { keywords: ['60%', '70%', '80%'], priority: 9, emoji: '💥' },
   { keywords: ['40%', '45%'], priority: 8, emoji: '⚡' },
   { keywords: ['30%', '35%'], priority: 7, emoji: '🎯' },
   { keywords: ['20%', '25%'], priority: 6, emoji: '💰' },
-  
-  // 무료 혜택
   { keywords: ['무료', '공짜', '0원'], priority: 9, emoji: '🆓' },
   { keywords: ['증정', '선물', '사은품'], priority: 7, emoji: '🎁' },
-  
-  // 기간 혜택
   { keywords: ['18개월', '12개월', '24개월'], priority: 8, emoji: '📅' },
   { keywords: ['6개월', '3개월'], priority: 6, emoji: '⏰' },
-  
-  // 특별 이벤트
   { keywords: ['페스타', '빅세일', '대박세일'], priority: 8, emoji: '🎉' },
   { keywords: ['런칭', '신상품', '출시'], priority: 7, emoji: '✨' },
   { keywords: ['한정', '특가', '긴급'], priority: 7, emoji: '⚠️' },
-  
-  // 추가 혜택
   { keywords: ['설치비무료', '등록비무료'], priority: 6, emoji: '🔧' },
   { keywords: ['캐시백', '적립'], priority: 6, emoji: '💳' },
   { keywords: ['경품', '추첨', '럭키드로우'], priority: 5, emoji: '🎲' }
@@ -89,16 +80,11 @@ const PRODUCT_ICONS = {
 };
 
 async function scrapePromotions() {
-  console.log('🕷️ 코웨이 프로모션 대량 스크래핑 시작...');
+  console.log('🕷️ 코웨이 프로모션 스크래핑 시작...');
   
   const browser = await puppeteer.launch({
     headless: true,
-    args: [
-      '--no-sandbox', 
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu'
-    ]
+    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu']
   });
   
   const allPromotions = [];
@@ -106,355 +92,220 @@ async function scrapePromotions() {
   for (const target of SCRAPE_TARGETS) {
     try {
       console.log(`📡 ${target.name} 스크래핑 중...`);
-      
       const page = await browser.newPage();
+
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      
-      // 타임아웃 연장 및 네트워크 대기
-      await page.goto(target.url, { 
-        waitUntil: 'networkidle2',
-        timeout: 60000 
+      page.setDefaultNavigationTimeout(60000);
+      page.setDefaultTimeout(60000);
+
+      // 리소스 차단
+      await page.setRequestInterception(true);
+      page.on('request', req => {
+        const r = req.resourceType();
+        if (['image','stylesheet','font','media'].includes(r)) req.abort();
+        else req.continue();
       });
-      
-      // 페이지 로딩 및 동적 컨텐츠 대기
-      await page.waitForTimeout(5000);
-      
-      // 스크롤하여 동적 컨텐츠 로드
-      await page.evaluate(() => {
-        return new Promise((resolve) => {
-          let totalHeight = 0;
-          const distance = 100;
-          const timer = setInterval(() => {
-            const scrollHeight = document.body.scrollHeight;
-            window.scrollBy(0, distance);
-            totalHeight += distance;
-            
-            if(totalHeight >= scrollHeight){
-              clearInterval(timer);
-              resolve();
-            }
-          }, 100);
-        });
+
+      try {
+        await page.goto(target.url, { waitUntil: 'networkidle2', timeout: 60000 });
+      } catch(e) {
+        console.warn(`⚠️ page.goto 경고: ${target.url} - ${e.message}`);
+      }
+
+      try {
+        await page.waitForSelector(target.selector, { timeout: 8000 });
+      } catch(e) {
+        console.info(`ℹ️ selector 미발견: ${target.selector}`);
+      }
+
+      // 안정적 스크롤
+      await page.evaluate(async () => {
+        const distance = 400;
+        const maxScrolls = 30;
+        const pauseMs = 700;
+        let scrolls = 0;
+        function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+        while(scrolls++ < maxScrolls){
+          const prevHeight = document.body.scrollHeight;
+          window.scrollBy(0,distance);
+          await sleep(pauseMs);
+          const newHeight = document.body.scrollHeight;
+          if(newHeight === prevHeight){
+            await sleep(1200);
+            if(document.body.scrollHeight === prevHeight) break;
+          }
+        }
       });
-      
+      await page.waitForTimeout(700);
+
+      await page.setRequestInterception(false);
+      page.removeAllListeners('request');
+
       const promotions = await page.evaluate((selector, targetName, highValueKeywords, productIcons) => {
         const items = Array.from(document.querySelectorAll(selector));
-        const textElements = Array.from(document.querySelectorAll('div, p, span, h1, h2, h3, h4, h5, h6'));
+        const textElements = Array.from(document.querySelectorAll('div,p,span,h1,h2,h3,h4,h5,h6'));
         const allElements = [...items, ...textElements];
-        
         const results = [];
         const processedTexts = new Set();
-        
-        allElements.forEach((item, index) => {
-          if (index < 50) { // 더 많은 요소 검사
-            const text = item.innerText || item.textContent || '';
-            const html = item.innerHTML || '';
-            
-            // 중복 방지
-            if (processedTexts.has(text) || text.length < 15) return;
+
+        allElements.forEach((item,index)=>{
+          if(index<200){
+            const text=item.innerText||item.textContent||'';
+            if(processedTexts.has(text)||text.length<15) return;
             processedTexts.add(text);
-            
-            // 고가치 키워드 매칭
-            let matchedKeywords = [];
-            let totalPriority = 0;
-            let bestEmoji = '🎯';
-            
-            highValueKeywords.forEach(group => {
-              const matched = group.keywords.filter(keyword => text.includes(keyword));
-              if (matched.length > 0) {
+
+            let matchedKeywords=[];
+            let totalPriority=0;
+            let bestEmoji='🎯';
+            highValueKeywords.forEach(group=>{
+              const matched=group.keywords.filter(k=>text.includes(k));
+              if(matched.length>0){
                 matchedKeywords.push(...matched);
-                totalPriority += group.priority * matched.length;
-                bestEmoji = group.emoji;
+                totalPriority+=group.priority*matched.length;
+                bestEmoji=group.emoji;
               }
             });
-            
-            // 최소 우선순위 이상인 것만 선택
-            if (totalPriority >= 5) {
-              // 제품명 추출 (더 정교하게)
-              const productKeywords = ['정수기', '공기청정기', '비데', '매트리스', '안마의자', '제습기', '연수기', '아이콘', '노블', '룰루', '비렉스', '프라임', '얼음정수기', '인덕션', '의류청정기'];
-              let product = '코웨이 제품';
-              let productIcon = '🏠';
-              
-              for (const keyword of productKeywords) {
-                if (text.includes(keyword)) {
-                  product = keyword.includes('아이콘') ? '아이콘 정수기' :
-                           keyword.includes('노블') ? '노블 시리즈' :
-                           keyword.includes('룰루') ? '룰루 비데' :
-                           keyword.includes('비렉스') ? '비렉스 매트리스' : 
-                           keyword;
-                  productIcon = productIcons[keyword] || '🏠';
+
+            if(totalPriority>=5){
+              const productKeywords=['정수기','공기청정기','비데','매트리스','안마의자','제습기','연수기','아이콘','노블','룰루','비렉스','프라임','얼음정수기','인덕션','의류청정기'];
+              let product='코웨이 제품';
+              let productIcon='🏠';
+              for(const keyword of productKeywords){
+                if(text.includes(keyword)){
+                  product=keyword.includes('아이콘')?'아이콘 정수기':
+                          keyword.includes('노블')?'노블 시리즈':
+                          keyword.includes('룰루')?'룰루 비데':
+                          keyword.includes('비렉스')?'비렉스 매트리스':keyword;
+                  productIcon=productIcons[keyword]||'🏠';
                   break;
                 }
               }
-              
-              // 프로모션 제목 추출 (첫 번째 라인 또는 굵은 텍스트)
-              let promotion = '';
-              const lines = text.split('\n').filter(line => line.trim().length > 5);
-              if (lines.length > 0) {
-                promotion = lines[0].trim();
-                if (promotion.length > 40) {
-                  promotion = promotion.substring(0, 40) + '...';
-                }
+
+              let promotion='';
+              const lines=text.split('\n').filter(l=>l.trim().length>5);
+              if(lines.length>0){
+                promotion=lines[0].trim();
+                if(promotion.length>40) promotion=promotion.substring(0,40)+'...';
               }
-              
-              if (!promotion) {
-                promotion = text.substring(0, 30).trim() + '...';
-              }
-              
-              // 혜택 내용 추출 (더 자세하게)
-              let benefit = '';
-              const benefits = [];
-              
-              // 할인율 추출
-              const discountMatches = text.match(/\d+%[^.]*?할인/g);
-              if (discountMatches) benefits.push(...discountMatches);
-              
-              // 무료 혜택 추출
-              const freeMatches = text.match(/[^.]*?무료[^.]*/g);
-              if (freeMatches) benefits.push(...freeMatches.slice(0, 2));
-              
-              // 기간 혜택 추출
-              const periodMatches = text.match(/\d+개월[^.]*?/g);
-              if (periodMatches) benefits.push(...periodMatches.slice(0, 2));
-              
-              // 증정 혜택 추출
-              const giftMatches = text.match(/[^.]*?증정[^.]*/g);
-              if (giftMatches) benefits.push(...giftMatches.slice(0, 1));
-              
-              benefit = benefits.slice(0, 3).join(' + ') || '특별 혜택 제공';
-              
-              // 비고 추출 (기간, 조건 등)
-              let remark = targetName;
-              const remarkParts = [];
-              
-              // 기간 추출
-              const dateMatches = text.match(/\d+월\s*\d+일?까지|\d+\/\d+까지|~\s*\d+월/g);
-              if (dateMatches) remarkParts.push(dateMatches[0]);
-              
-              // 조건 추출
-              const conditionMatches = text.match(/(온라인|매장|신규|재렌탈|한정)[^.]*?/g);
-              if (conditionMatches) remarkParts.push(...conditionMatches.slice(0, 1));
-              
-              if (remarkParts.length > 0) {
-                remark = remarkParts.join(' • ');
-              }
-              
+              if(!promotion) promotion=text.substring(0,30).trim()+'...';
+
+              let benefit='';
+              const benefits=[];
+              const discountMatches=text.match(/\d+%[^.]*?할인/g);
+              if(discountMatches) benefits.push(...discountMatches);
+              const freeMatches=text.match(/[^.]*?무료[^.]*/g);
+              if(freeMatches) benefits.push(...freeMatches.slice(0,2));
+              const periodMatches=text.match(/\d+개월[^.]*?/g);
+              if(periodMatches) benefits.push(...periodMatches.slice(0,2));
+              const giftMatches=text.match(/[^.]*?증정[^.]*/g);
+              if(giftMatches) benefits.push(...giftMatches.slice(0,1));
+              benefit=benefits.slice(0,3).join(' + ')||'특별 혜택 제공';
+
+              let remark=targetName;
+              const remarkParts=[];
+              const dateMatches=text.match(/\d+월\s*\d+일?까지|\d+\/\d+까지|~\s*\d+월/g);
+              if(dateMatches) remarkParts.push(dateMatches[0]);
+              const conditionMatches=text.match(/(온라인|매장|신규|재렌탈|한정)[^.]*?/g);
+              if(conditionMatches) remarkParts.push(...conditionMatches.slice(0,1));
+              if(remarkParts.length>0) remark=remarkParts.join(' • ');
+
               results.push({
-                product: productIcon + ' ' + product,
-                promotion: bestEmoji + ' ' + promotion,
-                benefit: benefit,
-                remark: remark,
-                source: targetName,
-                priority: totalPriority,
-                keywords: matchedKeywords,
-                scraped: new Date().toISOString()
+                product:productIcon+' '+product,
+                promotion:bestEmoji+' '+promotion,
+                benefit:benefit,
+                remark:remark,
+                source:targetName,
+                priority:totalPriority,
+                keywords:matchedKeywords,
+                scraped:new Date().toISOString()
               });
             }
           }
         });
-        
-        // 우선순위 순으로 정렬
-        return results.sort((a, b) => b.priority - a.priority);
-        
+        return results.sort((a,b)=>b.priority-a.priority);
       }, target.selector, target.name, HIGH_VALUE_KEYWORDS, PRODUCT_ICONS);
-      
+
       allPromotions.push(...promotions);
-      console.log(`✅ ${target.name}에서 ${promotions.length}개 고가치 프로모션 발견`);
-      
+      console.log(`✅ ${target.name}에서 ${promotions.length}개 프로모션 발견`);
       await page.close();
-      
-      // 서버 부하 방지를 위한 딜레이
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-    } catch (error) {
-      console.error(`❌ ${target.name} 스크래핑 실패:`, error.message);
+      await new Promise(r=>setTimeout(r,2000));
+    } catch(err){
+      console.error(`❌ ${target.name} 실패:`,err.message);
     }
   }
-  
+
   await browser.close();
-  
-  // 중복 제거 및 품질 필터링
-  const uniquePromotions = removeDuplicatesAndFilter(allPromotions);
-  
-  // 최소 데이터 보장
-  if (uniquePromotions.length < 3) {
-    console.log('⚠️ 스크래핑 데이터 부족. 고품질 백업 데이터 추가');
-    uniquePromotions.push(...getHighValueBackupData());
-  }
-  
-  // 우선순위 기준으로 정렬 (최대 20개)
-  const finalPromotions = uniquePromotions
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, 20);
-  
-  console.log(`🎉 총 ${finalPromotions.length}개 고가치 프로모션 수집 완료`);
-  
+  const uniquePromotions=removeDuplicatesAndFilter(allPromotions);
+  if(uniquePromotions.length<3) uniquePromotions.push(...getHighValueBackupData());
+  const finalPromotions=uniquePromotions.sort((a,b)=>b.priority-a.priority).slice(0,20);
+  console.log(`🎉 총 ${finalPromotions.length}개 프로모션 수집 완료`);
   return finalPromotions;
 }
 
-function removeDuplicatesAndFilter(promotions) {
-  const seen = new Set();
-  const filtered = [];
-  
-  promotions.forEach(promo => {
-    const key = `${promo.product}-${promo.benefit}`;
-    
-    // 중복 제거 및 품질 필터
-    if (!seen.has(key) && 
-        promo.benefit.length > 10 && 
-        promo.priority >= 5 &&
-        !promo.benefit.includes('undefined')) {
+function removeDuplicatesAndFilter(promotions){
+  const seen=new Set();
+  const filtered=[];
+  promotions.forEach(p=>{
+    const key=`${p.product}-${p.benefit}`;
+    if(!seen.has(key)&&p.benefit.length>10&&p.priority>=5&&!p.benefit.includes('undefined')){
       seen.add(key);
-      filtered.push(promo);
+      filtered.push(p);
     }
   });
-  
   return filtered;
 }
 
-function getHighValueBackupData() {
+function getHighValueBackupData(){
   return [
     {
-      product: "⭐ 아이콘 정수기 시리즈",
-      promotion: "🔥 2025 코웨이페스타",
-      benefit: "최대 12개월 렌탈료 50% 할인 + 설치비 무료 + 케어서비스 1년",
-      remark: "연중 최대 프로모션 • ~4월 28일",
-      source: "코웨이 공식",
-      priority: 10,
-      keywords: ["50%", "12개월", "무료"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "🧊 얼음정수기 전 라인업",
-      promotion: "💥 아이스 빅 페스타",
-      benefit: "최대 18개월 렌탈료 반값 + 제네시스 GV70 추첨 + 골드바 증정",
-      remark: "여름 특가 • 추첨 이벤트",
-      source: "코웨이 공식",
-      priority: 10,
-      keywords: ["반값", "18개월", "증정"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "💨 제습기 4개 모델",
-      promotion: "⚡ 제습기 반값 프로모션",
-      benefit: "최대 12개월 렌탈료 50% 할인 + 동시구매시 추가 10% 할인",
-      remark: "패키지 할인 가능",
-      source: "코웨이 공식",
-      priority: 9,
-      keywords: ["반값", "50%", "추가할인"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "💳 코웨이 제휴카드",
-      promotion: "💰 카드 혜택 대폭 확대",
-      benefit: "월 렌탈료 최대 30,000원 할인 + 캐시백 최대 11만원",
-      remark: "실적 조건별 차등 적용",
-      source: "제휴카드 혜택",
-      priority: 8,
-      keywords: ["30,000원", "11만원", "캐시백"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "🌸 룰루 더블케어 비데",
-      promotion: "💎 프리미엄 케어 패키지",
-      benefit: "3개월 무료 + 렌탈료 40% 할인 + 설치당일 프리미엄 사은품",
-      remark: "프리미엄 라인 출시기념",
-      source: "코웨이 인증점",
-      priority: 8,
-      keywords: ["무료", "40%", "사은품"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "⚡ 비렉스 트리플체어",
-      promotion: "🔥 안마의자 빅세일",
-      benefit: "렌탈료 60% 할인 (12개월) + 무료 안마 서비스 + 건강검진",
-      remark: "힐링케어 패키지",
-      source: "비렉스 공식",
-      priority: 9,
-      keywords: ["60%", "12개월", "무료"],
-      scraped: new Date().toISOString()
+      product:"⭐ 아이콘 정수기 시리즈",
+      promotion:"🔥 2025 코웨이페스타",
+      benefit:"최대 12개월 렌탈료 50% 할인 + 설치비 무료 + 케어서비스 1년",
+      remark:"연중 최대 프로모션 • ~4월 28일",
+      source:"코웨이 공식",
+      priority:10,
+      keywords:["50%","12개월","무료"],
+      scraped:new Date().toISOString()
     }
   ];
 }
 
-async function updatePromoData() {
-  try {
-    console.log('🚀 코웨이 프로모션 자동 업데이트 시작...');
-    
-    const promotions = await scrapePromotions();
-    
-    // JSON 파일로 저장
-    fs.writeFileSync('promotions.json', JSON.stringify(promotions, null, 2));
-    console.log('✅ promotions.json 파일 생성 완료');
-    
-    // HTML 파일 업데이트 (실시간 데이터 주입)
+async function updatePromoData(){
+  try{
+    console.log('🚀 코웨이 프로모션 업데이트 시작...');
+    const promotions=await scrapePromotions();
+    fs.writeFileSync('promotions.json',JSON.stringify(promotions,null,2));
+    console.log('✅ promotions.json 저장 완료');
     updateHTMLFile(promotions);
-    
-    // 통계 출력
-    console.log(`📊 스크래핑 통계:`);
-    console.log(`   - 총 프로모션: ${promotions.length}개`);
-    console.log(`   - 평균 우선도: ${(promotions.reduce((sum, p) => sum + p.priority, 0) / promotions.length).toFixed(1)}/10`);
-    console.log(`   - 스크래핑 완료 시간: ${new Date().toLocaleString('ko-KR')}`);
-    
-    console.log('🎉 프로모션 데이터 업데이트 완료!');
-    
-  } catch (error) {
-    console.error('❌ 업데이트 실패:', error);
-    
-    // 실패시에도 백업 데이터로 파일 생성
-    const backupData = getHighValueBackupData();
-    fs.writeFileSync('promotions.json', JSON.stringify(backupData, null, 2));
-    console.log('🔄 백업 데이터로 파일 생성 완료');
-    
-    process.exit(1);
+    console.log(`📊 총 ${promotions.length}개 프로모션 저장됨`);
+  }catch(e){
+    console.error('❌ 업데이트 실패:',e);
+    const backup=getHighValueBackupData();
+    fs.writeFileSync('promotions.json',JSON.stringify(backup,null,2));
   }
 }
 
-function updateHTMLFile(promotions) {
-  try {
-    const htmlPath = 'index.html';
-    
-    if (!fs.existsSync(htmlPath)) {
-      console.log('ℹ️ index.html 파일이 없어서 HTML 업데이트 스킵');
-      return;
-    }
-    
-    let htmlContent = fs.readFileSync(htmlPath, 'utf8');
-    
-    // 마지막 업데이트 시간
-    const updateTime = new Date().toLocaleString('ko-KR');
-    
-    // 프로모션 데이터를 HTML에 주입
-    const dataScript = `
+function updateHTMLFile(promotions){
+  try{
+    const htmlPath='index.html';
+    if(!fs.existsSync(htmlPath)) return;
+    let htmlContent=fs.readFileSync(htmlPath,'utf8');
+    const updateTime=new Date().toLocaleString('ko-KR');
+    const dataScript=`
     <script>
-    // 🤖 GitHub Actions 자동 생성 데이터 (${updateTime})
-    window.LIVE_PROMOTION_DATA = ${JSON.stringify(promotions, null, 2)};
-    window.LAST_SCRAPED = "${updateTime}";
-    window.SCRAPING_STATUS = "LIVE";
-    console.log("✅ GitHub Actions 실시간 데이터 로드됨:", window.LIVE_PROMOTION_DATA.length);
+    window.LIVE_PROMOTION_DATA=${JSON.stringify(promotions,null,2)};
+    window.LAST_SCRAPED="${updateTime}";
+    window.SCRAPING_STATUS="LIVE";
     </script>`;
-    
-    // 기존 데이터 스크립트 교체 또는 추가
-    if (htmlContent.includes('window.LIVE_PROMOTION_DATA')) {
-      htmlContent = htmlContent.replace(
-        /<script>[\s\S]*?window\.LIVE_PROMOTION_DATA[\s\S]*?<\/script>/,
-        dataScript
-      );
-    } else {
-      htmlContent = htmlContent.replace('</head>', dataScript + '\n</head>');
+    if(htmlContent.includes('window.LIVE_PROMOTION_DATA')){
+      htmlContent=htmlContent.replace(/<script>[\s\S]*?window\.LIVE_PROMOTION_DATA[\s\S]*?<\/script>/,dataScript);
+    }else{
+      htmlContent=htmlContent.replace('</head>',dataScript+'\n</head>');
     }
-    
-    fs.writeFileSync(htmlPath, htmlContent);
-    console.log('✅ HTML 파일에 실시간 데이터 주입 완료');
-    
-  } catch (error) {
-    console.error('❌ HTML 업데이트 실패:', error);
-  }
+    fs.writeFileSync(htmlPath,htmlContent);
+    console.log('✅ HTML 업데이트 완료');
+  }catch(e){console.error('❌ HTML 업데이트 실패:',e);}
 }
 
-// 스크립트 실행
-if (require.main === module) {
-  updatePromoData();
-}
-
-module.exports = { scrapePromotions, updatePromoData };
+if(require.main===module){updatePromoData();}
+module.exports={scrapePromotions,updatePromoData};
