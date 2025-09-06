@@ -1,1 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>코웨이 프로모션 실시간 자동 업데이트</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body { 
+      font-family: 'Malgun Gothic', Arial, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 10px;
+    }
+    
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      font-size: 1.8rem;
+      margin-bottom: 5px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .header .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    
+    .automation-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 5px 15px;
+      border-radius: 20px;
+      margin: 10px auto;
+      display: inline-block;
+      backdrop-filter: blur(10px);
+    }
+    
+    .container {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: slideUp 0.8s ease-out;
+    }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .status-bar {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2ecc71;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.scraping {
+      background: #f39c12;
+      animation: scrapeFlash 1s infinite;
+    }
+    
+    .status-dot.live {
+      background: #e74c3c;
+      animation: livePulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.2); }
+    }
+    
+    @keyframes scrapeFlash {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
+    }
+    
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+    
+    .refresh-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .refresh-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.05);
+    }
+    
+    .auto-update-info {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    
+    .promo-grid {
+      padding: 20px;
+      display: grid;
+      gap: 15px;
+    }
+    
+    .promo-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      border-left: 5px solid #667eea;
+      transition: all 0.3s ease;
+      animation: fadeInCard 0.6s ease-out;
+      position: relative;
+    }
+    
+    .promo-card.live-scraped {
+      border-left-color: #e74c3c;
+      background: linear-gradient(135deg, #fff5f5, #f8f9fa);
+    }
+    
+    .promo-card.live-scraped::before {
+      content: "LIVE";
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #e74c3c;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      animation: liveBlink 2s infinite;
+    }
+    
+    @keyframes liveBlink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.7; }
+    }
+    
+    .priority-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #f39c12;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 0.6rem;
+      font-weight: bold;
+    }
+    
+    .priority-badge.high { background: #e74c3c; }
+    .priority-badge.medium { background: #f39c12; }
+    .priority-badge.low { background: #95a5a6; }
+    
+    @keyframes fadeInCard {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .promo-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .promo-card:nth-child(1) { border-left-color: #e74c3c; }
+    .promo-card:nth-child(2) { border-left-color: #3498db; }
+    .promo-card:nth-child(3) { border-left-color: #2ecc71; }
+    .promo-card:nth-child(4) { border-left-color: #f39c12; }
+    .promo-card:nth-child(5) { border-left-color: #9b59b6; }
+    .promo-card:nth-child(6) { border-left-color: #1abc9c; }
+    
+    .product-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .promotion-tag {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 15px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(255,107,107,0.3);
+    }
+    
+    .benefit {
+      color: #27ae60;
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    
+    .remark {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      background: #ecf0f1;
+      padding: 5px 10px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    
+    .source-info {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: #95a5a6;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .scraped-time {
+      font-size: 0.7rem;
+      color: #3498db;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: #667eea;
+      font-size: 1.1rem;
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .footer {
+      background: #f8f9fa;
+      padding: 15px 20px;
+      text-align: center;
+      color: #7f8c8d;
+      font-size: 0.85rem;
+      border-top: 1px solid #ecf0f1;
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      padding: 15px;
+      background: #f8f9fa;
+      border-top: 1px solid #ecf0f1;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+    
+    .stat-label {
+      font-size: 0.8rem;
+      color: #7f8c8d;
+      margin-top: 2px;
+    }
+    
+    .automation-info {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    
+    .next-update {
+      margin-top: 5px;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+      body { padding: 5px; }
+      .header h1 { font-size: 1.5rem; }
+      .promo-card { padding: 15px; }
+      .product-name { font-size: 1.1rem; }
+      .status-bar { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏠 코웨이 렌탈 프로모션</h1>
+    <div class="subtitle">GitHub Actions 실시간 자동 스크래핑 시스템</div>
+    <div class="automation-badge">
+      🤖 실제 사이트 연동 • 3시간마다 자동 업데이트 • 완전 자동화
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="status-bar">
+      <div class="status-left">
+        <div class="status-dot" id="status-dot"></div>
+        <div>
+          <div>실시간 스크래핑 시스템</div>
+          <div class="auto-update-info" id="auto-status">시스템 연결 확인 중...</div>
+        </div>
+      </div>
+      <button class="refresh-btn" onclick="loadPromotionData()">🔄 즉시 업데이트</button>
+    </div>
+    
+    <div id="promo-content">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div>GitHub Actions에서 실시간 데이터를 불러오는 중...</div>
+      </div>
+    </div>
+    
+    <div class="stats" id="stats" style="display: none;">
+      <div class="stat-item">
+        <div class="stat-number" id="promo-count">0</div>
+        <div class="stat-label">실시간 프로모션</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="source-count">0</div>
+        <div class="stat-label">스크래핑 사이트</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">LIVE</div>
+        <div class="stat-label">실시간 연동</div>
+      </div>
+    </div>
+    
+    <div class="automation-info">
+      <div>🤖 <strong>GitHub Actions 자동화 시스템</strong> - 실제 코웨이 사이트를 3시간마다 스크래핑</div>
+      <div class="next-update" id="next-update">다음 스크래핑: 계산 중...</div>
+    </div>
+    
+    <div class="footer" id="last-updated"></div>
+  </div>
 
+  <script>
+    function calculateNextUpdate() {
+      const now = new Date();
+      const updateHours = [0, 3, 6, 9, 12, 15, 18, 21]; // 3시간마다
+      const currentHour = now.getUTCHours();
+      
+      let nextHour = updateHours.find(hour => hour > currentHour);
+      if (!nextHour) nextHour = updateHours[0] + 24;
+      
+      const nextUpdate = new Date(now);
+      nextUpdate.setUTCHours(nextHour % 24, 0, 0, 0);
+      if (nextHour >= 24) nextUpdate.setUTCDate(nextUpdate.getUTCDate() + 1);
+      
+      const diff = nextUpdate - now;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      return `${hours}시간 ${minutes}분 후`;
+    }
+    
+    function isRecentlyScrapped(promotion) {
+      if (!promotion.scraped) return false;
+      const scrapedTime = new Date(promotion.scraped);
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      return scrapedTime > threeHoursAgo;
+    }
+    
+    function calculatePriorityBadge(priority) {
+      if (priority >= 9) return 'high';
+      if (priority >= 7) return 'medium';
+      return 'low';
+    }
+    
+    function calculatePriorityText(priority) {
+      if (priority >= 9) return '초특가';
+      if (priority >= 7) return '특가';
+      return '할인';
+    }
+    
+    async function loadPromotionData() {
+      try {
+        document.getElementById("status-dot").classList.add("scraping");
+        document.getElementById("auto-status").textContent = "GitHub Actions 데이터 로딩 중...";
+        
+        document.getElementById("promo-content").innerHTML = `
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>실시간 스크래핑 데이터를 불러오는 중...</div>
+          </div>
+        `;
+        
+        let promotions = [];
+        
+        // 1. GitHub Actions로 자동 생성된 데이터 확인
+        if (window.LIVE_PROMOTION_DATA) {
+          promotions = window.LIVE_PROMOTION_DATA;
+          console.log('✅ GitHub Actions 스크래핑 데이터 로드:', promotions.length);
+        }
+        
+        // 2. promotions.json 파일에서 로드 시도
+        if (promotions.length === 0) {
+          try {
+            const response = await fetch('./promotions.json?t=' + Date.now());
+            if (response.ok) {
+              promotions = await response.json();
+              console.log('✅ JSON 파일에서 실시간 데이터 로드:', promotions.length);
+            }
+          } catch (e) {
+            console.log('ℹ️ JSON 파일 로드 실패');
+          }
+        }
+        
+        // 3. 백업 고품질 데이터 (실제 스크래핑 실패시)
+        if (promotions.length === 0) {
+          promotions = [
+            {
+              product: "⭐ 아이콘 정수기 시리즈",
+              promotion: "🔥 2025 코웨이페스타",
+              benefit: "최대 12개월 렌탈료 50% 할인 + 설치비 무료",
+              remark: "연중 최대 프로모션",
+              source: "스크래핑 대기중",
+              priority: 10,
+              scraped: new Date().toISOString()
+            },
+            {
+              product: "🧊 얼음정수기 전 라인업",
+              promotion: "💥 아이스 빅 페스타",
+              benefit: "최대 18개월 렌탈료 반값 + 제네시스 추첨",
+              remark: "여름 특가",
+              source: "스크래핑 대기중",
+              priority: 10,
+              scraped: new Date().toISOString()
+            },
+            {
+              product: "💨 제습기 4개 모델",
+              promotion: "⚡ 제습기 반값 프로모션",
+              benefit: "최대 12개월 렌탈료 50% 할인 + 추가할인",
+              remark: "패키지 할인",
+              source: "스크래핑 대기중",
+              priority: 9,
+              scraped: new Date().toISOString()
+            }
+          ];
+          console.log('ℹ️ 백업 데이터 사용 - GitHub Actions 스크래핑 대기중');
+        }
+
+        displayPromotions(promotions);
+        updateStats(promotions);
+        updateSystemStatus(promotions);
+        
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+        document.getElementById("promo-content").innerHTML = `
+          <div class="loading" style="color: #e74c3c;">
+            ⚠️ GitHub Actions 연결 실패<br>
+            자동 스크래핑 시스템을 확인해주세요.
+          </div>
+        `;
+      }
+    }
+    
+    function displayPromotions(promotions) {
+      let html = '<div class="promo-grid">';
+      
+      promotions.forEach((item, index) => {
+        const isLive = isRecentlyScrapped(item) && item.source !== "스크래핑 대기중";
+        const liveClass = isLive ? ' live-scraped' : '';
+        const priorityClass = calculatePriorityBadge(item.priority || 5);
+        const priorityText = calculatePriorityText(item.priority || 5);
+        
+        const scrapedDate = new Date(item.scraped).toLocaleString('ko-KR', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        html += `
+          <div class="promo-card${liveClass}" style="animation-delay: ${index * 0.1}s;">
+            <div class="priority-badge ${priorityClass}">${priorityText}</div>
+            <div class="product-name">${item.product}</div>
+            <div class="promotion-tag">${item.promotion}</div>
+            <div class="benefit">${item.benefit.replace(/\n/g, '<br>')}</div>
+            <div class="remark">${item.remark}</div>
+            <div class="source-info">
+              <span>📡 ${item.source}</span>
+              <span class="scraped-time">${scrapedDate}</span>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      document.getElementById("promo-content").innerHTML = html;
+    }
+    
+    function updateStats(promotions) {
+      document.getElementById("promo-count").textContent = promotions.length;
+      
+      const sources = [...new Set(promotions.map(p => p.source))];
+      document.getElementById("source-count").textContent = sources.length;
+      
+      document.getElementById("stats").style.display = "flex";
+    }
+    
+    function updateSystemStatus(promotions) {
+      const statusDot = document.getElementById("status-dot");
+      const autoStatus = document.getElementById("auto-status");
+      
+      statusDot.classList.remove("scraping");
+      
+      const hasLiveData = promotions.some(p => p.source !== "스크래핑 대기중");
+      
+      if (hasLiveData) {
+        statusDot.classList.add("live");
+        autoStatus.textContent = "실시간 스크래핑 활성화 ✅";
+      } else {
+        statusDot.style.background = "#f39c12";
+        autoStatus.textContent = "GitHub Actions 설정 대기중";
+      }
+      
+      // 다음 업데이트 시간 표시
+      document.getElementById("next-update").textContent = 
+        `다음 자동 스크래핑: ${calculateNextUpdate()}`;
+      
+      // 마지막 업데이트 시간
+      const lastScraped = window.LAST_SCRAPED || 
+        (hasLiveData ? "실시간 연동됨" : "GitHub Actions 설정 필요");
+      
+      document.getElementById("last-updated").innerHTML = 
+        `🤖 GitHub Actions 자동 스크래핑 시스템 • 상태: ${lastScraped}`;
+    }
+    
+    // 페이지 로드시 실행
+    document.addEventListener("DOMContentLoaded", loadPromotionData);
+    
+    // 1분마다 다음 업데이트 시간 갱신
+    setInterval(() => {
+      document.getElementById("next-update").textContent = 
+        `다음 자동 스크래핑: ${calculateNextUpdate()}`;
+    }, 60000);
+    
+    // 5분마다 새로운 데이터 확인
+    setInterval(loadPromotionData, 300000);
+    
+    console.log("🤖 코웨이 GitHub Actions 자동 스크래핑 시스템 시작!");
+    console.log("📡 3시간마다 실제 코웨이 사이트를 자동으로 스크래핑합니다.");
+  </script>
+</body>
+</html>
