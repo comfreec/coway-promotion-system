@@ -1,7 +1,6 @@
-// scraper.js - 코웨이 프로모션 자동 스크래핑
+// scraper.js - 코웨이 프로모션 자동 스크래핑 (수정본)
 const puppeteer = require('puppeteer');
 const fs = require('fs');
-const path = require('path');
 
 // 스크래핑할 사이트들
 const SCRAPE_TARGETS = [
@@ -40,79 +39,82 @@ async function scrapePromotions() {
       console.log(`${target.name} 스크래핑 중...`);
       
       const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      );
       
       await page.goto(target.url, { 
-        waitUntil: 'networkidle2',
-        timeout: 30000 
+        waitUntil: 'domcontentloaded', // networkidle2 → domcontentloaded
+        timeout: 15000 // 30초 → 15초
       });
+      console.log(`${target.name} page.goto 완료`);
       
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(2000); // 짧게 대기
+      console.log(`${target.name} page.evaluate 시작`);
       
       const promotions = await page.evaluate((selector, targetName) => {
         const items = document.querySelectorAll(selector);
         const results = [];
         
         items.forEach((item, index) => {
-          if (index < 5) {
-            const text = item.innerText || item.textContent || '';
+          if (index >= 5) return; // 5개까지만
+        
+          const text = item.innerText || item.textContent || '';
+          const promoKeywords = ['할인', '프로모션', '이벤트', '특가', '무료', '증정', '혜택', '반값'];
+          const hasPromoKeyword = promoKeywords.some(keyword => text.includes(keyword));
+          
+          if (hasPromoKeyword && text.length > 10) {
+            const productKeywords = ['정수기', '공기청정기', '비데', '매트리스', '안마의자', '제습기', '연수기', '아이콘', '노블'];
+            let product = '코웨이 제품';
             
-            const promoKeywords = ['할인', '프로모션', '이벤트', '특가', '무료', '증정', '혜택', '반값'];
-            const hasPromoKeyword = promoKeywords.some(keyword => text.includes(keyword));
-            
-            if (hasPromoKeyword && text.length > 10) {
-              const productKeywords = ['정수기', '공기청정기', '비데', '매트리스', '안마의자', '제습기', '연수기', '아이콘', '노블'];
-              let product = '코웨이 제품';
-              
-              for (const keyword of productKeywords) {
-                if (text.includes(keyword)) {
-                  if (keyword === '아이콘') product = '아이콘 정수기';
-                  else if (keyword === '노블') product = '노블 시리즈';
-                  else product = keyword;
-                  break;
-                }
+            for (const keyword of productKeywords) {
+              if (text.includes(keyword)) {
+                if (keyword === '아이콘') product = '아이콘 정수기';
+                else if (keyword === '노블') product = '노블 시리즈';
+                else product = keyword;
+                break;
               }
-              
-              let promotion = text.split('\n')[0] || '특별 프로모션';
-              if (promotion.length > 30) {
-                promotion = promotion.substring(0, 30) + '...';
-              }
-              
-              let benefit = '';
-              if (text.includes('%')) {
-                const percentMatch = text.match(/\d+%[^.]*할인/g);
-                if (percentMatch) benefit = percentMatch[0];
-              }
-              if (text.includes('무료')) {
-                const freeMatch = text.match(/[^.]*무료[^.]*/g);
-                if (freeMatch) benefit += (benefit ? ' + ' : '') + freeMatch[0];
-              }
-              if (!benefit) benefit = '특별 혜택 제공';
-              
-              let remark = targetName + ' 확인';
-              if (text.includes('까지')) {
-                const dateMatch = text.match(/\d+월\s*\d+일까지/g);
-                if (dateMatch) remark = dateMatch[0];
-              }
-              
-              results.push({
-                product: product,
-                promotion: promotion,
-                benefit: benefit,
-                remark: remark,
-                source: targetName,
-                scraped: new Date().toISOString()
-              });
             }
+            
+            let promotion = text.split('\n')[0] || '특별 프로모션';
+            if (promotion.length > 30) {
+              promotion = promotion.substring(0, 30) + '...';
+            }
+            
+            let benefit = '';
+            if (text.includes('%')) {
+              const percentMatch = text.match(/\d+%[^.]*할인/g);
+              if (percentMatch) benefit = percentMatch[0];
+            }
+            if (text.includes('무료')) {
+              const freeMatch = text.match(/[^.]*무료[^.]*/g);
+              if (freeMatch) benefit += (benefit ? ' + ' : '') + freeMatch[0];
+            }
+            if (!benefit) benefit = '특별 혜택 제공';
+            
+            let remark = targetName + ' 확인';
+            if (text.includes('까지')) {
+              const dateMatch = text.match(/\d+월\s*\d+일까지/g);
+              if (dateMatch) remark = dateMatch[0];
+            }
+            
+            results.push({
+              product,
+              promotion,
+              benefit,
+              remark,
+              source: targetName,
+              scraped: new Date().toISOString()
+            });
           }
         });
         
         return results;
       }, target.selector, target.name);
       
-      allPromotions.push(...promotions);
-      console.log(`${target.name}에서 ${promotions.length}개 프로모션 발견`);
+      console.log(`${target.name} page.evaluate 완료, ${promotions.length}개 발견`);
       
+      allPromotions.push(...promotions);
       await page.close();
       
     } catch (error) {
@@ -130,7 +132,6 @@ async function scrapePromotions() {
   }
   
   console.log(`총 ${uniquePromotions.length}개 프로모션 수집 완료`);
-  
   return uniquePromotions;
 }
 
@@ -176,13 +177,9 @@ function getBackupData() {
 async function updatePromoData() {
   try {
     const promotions = await scrapePromotions();
-    
     fs.writeFileSync('promotions.json', JSON.stringify(promotions, null, 2));
-    
     updateHTMLFile(promotions);
-    
     console.log('프로모션 데이터 업데이트 완료');
-    
   } catch (error) {
     console.error('업데이트 실패:', error);
     process.exit(1);
