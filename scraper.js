@@ -318,7 +318,7 @@ function getHighValueBackupData() {
       product: "⭐ 아이콘 정수기 시리즈",
       promotion: "🔥 2025 코웨이페스타",
       benefit: "최대 12개월 렌탈료 50% 할인 + 설치비 무료 + 케어서비스 1년",
-      remark: "연중 최대 프로모션 • ~4월 28일",
+      remark: "연중 최대 프로모션 • ~12월 31일",
       source: "코웨이 공식",
       priority: 10,
       keywords: ["50%", "12개월", "무료"],
@@ -335,36 +335,6 @@ function getHighValueBackupData() {
       scraped: new Date().toISOString()
     },
     {
-      product: "💨 제습기 4개 모델",
-      promotion: "⚡ 제습기 반값 프로모션",
-      benefit: "최대 12개월 렌탈료 50% 할인 + 동시구매시 추가 10% 할인",
-      remark: "패키지 할인 가능",
-      source: "코웨이 공식",
-      priority: 9,
-      keywords: ["반값", "50%", "추가할인"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "💳 코웨이 제휴카드",
-      promotion: "💰 카드 혜택 대폭 확대",
-      benefit: "월 렌탈료 최대 30,000원 할인 + 캐시백 최대 11만원",
-      remark: "실적 조건별 차등 적용",
-      source: "제휴카드 혜택",
-      priority: 8,
-      keywords: ["30,000원", "11만원", "캐시백"],
-      scraped: new Date().toISOString()
-    },
-    {
-      product: "🌸 룰루 더블케어 비데",
-      promotion: "💎 프리미엄 케어 패키지",
-      benefit: "3개월 무료 + 렌탈료 40% 할인 + 설치당일 프리미엄 사은품",
-      remark: "프리미엄 라인 출시기념",
-      source: "코웨이 인증점",
-      priority: 8,
-      keywords: ["무료", "40%", "사은품"],
-      scraped: new Date().toISOString()
-    },
-    {
       product: "⚡ 비렉스 트리플체어",
       promotion: "🔥 안마의자 빅세일",
       benefit: "렌탈료 60% 할인 (12개월) + 무료 안마 서비스 + 건강검진",
@@ -372,6 +342,126 @@ function getHighValueBackupData() {
       source: "비렉스 공식",
       priority: 9,
       keywords: ["60%", "12개월", "무료"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "💨 제습기 4개 모델",
+      promotion: "⚡ 제습기 반값 프로모션",
+      benefit: "최대 12개월 렌탈료 50% 할인 + 동시구매시 추가 15% 할인",
+      remark: "패키지 할인 가능",
+      source: "코웨이 공식",
+      priority: 9,
+      keywords: ["반값", "50%", "추가할인"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "💳 KB국민 코웨이카드",
+      promotion: "💰 카드 특별 혜택",
+      benefit: "월 렌탈료 20,000원 할인 + 연회비 면제 + 캐시백 5만원",
+      remark: "실적 조건 80만원",
+      source: "제휴카드 혜택",
+      priority: 8,
+      keywords: ["20,000원", "면제", "캐시백"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🌸 룰루 더블케어 비데",
+      promotion: "💎 프리미엄 케어 패키지",
+      benefit: "3개월 완전무료 + 렌탈료 40% 할인 + 설치당일 프리미엄 사은품",
+      remark: "프리미엄 라인 출시기념",
+      source: "코웨이 인증점",
+      priority: 8,
+      keywords: ["완전무료", "40%", "사은품"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "👑 노블 공기청정기 시리즈",
+      promotion: "🌿 클린에어 빅세일",
+      benefit: "렌탈료 45% 할인 (9개월) + 필터 2년치 무료 + 공기질 측정기",
+      remark: "미세먼지 시즌 대비",
+      source: "코웨이 공식",
+      priority: 8,
+      keywords: ["45%", "9개월", "2년치"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🛏️ 슬립케어 매트리스",
+      promotion: "😴 수면건강 케어 패키지",
+      benefit: "30일 완전무료 체험 + 렌탈료 35% 할인 + 수면분석 서비스",
+      remark: "수면건강 캠페인",
+      source: "코웨이 공식",
+      priority: 7,
+      keywords: ["완전무료", "35%", "분석서비스"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "💧 연수기 CHP-7300R",
+      promotion: "💧 워터케어 패키지",
+      benefit: "정수기 동시가입시 추가 30% 할인 + 무료 수질검사 + 필터 1년",
+      remark: "패키지 할인 최대혜택",
+      source: "코웨이 공식",
+      priority: 7,
+      keywords: ["30%", "무료", "1년"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🔥 노블 인덕션",
+      promotion: "🍳 쿠킹 마스터 특가",
+      benefit: "렌탈료 25% 할인 (12개월) + 프리미엄 팬세트 + 요리교실 수강권",
+      remark: "쿠킹 전문가용",
+      source: "코웨이 공식",
+      priority: 6,
+      keywords: ["25%", "12개월", "팬세트"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "❄️ AIS 3.0 스파클링",
+      promotion: "✨ 탄산수 프리미엄 특가",
+      benefit: "스파클링 기능 무료 업그레이드 + 렌탈료 25% 할인 + CO2 6개월",
+      remark: "프리미엄 정수기",
+      source: "코웨이 공식",
+      priority: 6,
+      keywords: ["무료", "25%", "6개월"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "👕 의류청정기 신모델",
+      promotion: "🌟 패션케어 런칭 특가",
+      benefit: "출시기념 30% 할인 + 의류관리 가이드북 + 전용 행거세트",
+      remark: "신제품 런칭 기념",
+      source: "코웨이 공식",
+      priority: 6,
+      keywords: ["30%", "가이드북", "행거세트"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "💳 현대카드 M Edition",
+      promotion: "💰 카드 프리미엄 혜택",
+      benefit: "월 렌탈료 15,000원 할인 + M포인트 적립 + H-Coin 전환",
+      remark: "실적 조건 100만원",
+      source: "제휴카드 혜택",
+      priority: 6,
+      keywords: ["15,000원", "적립", "포인트"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🌊 AIS 정수기 3.0",
+      promotion: "🎯 IoT 스마트 특가",
+      benefit: "IoT 기능 무료 + 렌탈료 20% 할인 + 스마트 관리 서비스",
+      remark: "스마트홈 연동",
+      source: "코웨이 공식",
+      priority: 6,
+      keywords: ["무료", "20%", "스마트"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🪑 안마의자 프리미엄",
+      promotion: "💆 힐링 마스터 패키지",
+      benefit: "렌탈료 35% 할인 + 무료 마사지 서비스 + 건강상담 1년",
+      remark: "힐링케어 전문",
+      source: "비렉스 공식",
+      priority: 7,
+      keywords: ["35%", "무료", "1년"],
       scraped: new Date().toISOString()
     }
   ];
