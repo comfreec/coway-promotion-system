@@ -3,49 +3,67 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// 스크래핑할 사이트들 (확장된 리스트)
+// 스크래핑할 사이트들 (대폭 확장된 리스트)
 const SCRAPE_TARGETS = [
   {
-    name: '코웨이 공식 뉴스룸',
-    url: 'https://company.coway.com/newsroom/press',
-    selector: '.press-list .item, .news-item, .press-item',
-    type: 'news'
+    name: '코웨이 공식 홈페이지',
+    url: 'https://www.coway.com/',
+    selector: 'div, p, span, a, section, article',
+    type: 'official'
   },
   {
     name: '코웨이 이벤트 페이지',
     url: 'https://www.coway.com/event/list',
-    selector: '.event-item, .promotion-item, .event-card',
+    selector: 'div, p, span, a, section, article',
     type: 'event'
   },
   {
-    name: '코웨이 제휴카드 혜택',
-    url: 'https://coway-m.com/card',
-    selector: '.card-benefit, .discount-info, .promotion-box',
-    type: 'card'
+    name: '코웨이 제품 페이지 - 정수기',
+    url: 'https://www.coway.com/product/water-purifier',
+    selector: 'div, p, span, a, section, article',
+    type: 'product'
   },
   {
-    name: '코웨이 인증점 1',
-    url: 'https://cowayga.com/',
-    selector: '.promotion-banner, .event-banner, .discount-info',
-    type: 'dealer'
+    name: '코웨이 제품 페이지 - 공기청정기',
+    url: 'https://www.coway.com/product/air-purifier',
+    selector: 'div, p, span, a, section, article',
+    type: 'product'
   },
   {
-    name: '코웨이 인증점 2',
-    url: 'https://cowaydirect.co.kr/',
-    selector: '.promo-item, .event-item, .discount-banner',
-    type: 'dealer'
+    name: '코웨이 제품 페이지 - 비데',
+    url: 'https://www.coway.com/product/bidet',
+    selector: 'div, p, span, a, section, article',
+    type: 'product'
   },
   {
-    name: '코웨이 특별할인몰',
-    url: 'https://coway-korea.com/',
-    selector: '.special-offer, .discount-item, .promotion-card',
-    type: 'discount'
+    name: '코웨이 제품 페이지 - 매트리스',
+    url: 'https://www.coway.com/product/mattress',
+    selector: 'div, p, span, a, section, article',
+    type: 'product'
   },
   {
     name: '코웨이 렌탈샵',
     url: 'https://coway-m.com/',
-    selector: '.rental-promo, .discount-info, .special-event',
+    selector: 'div, p, span, a, section, article',
     type: 'rental'
+  },
+  {
+    name: '코웨이 공식 몰',
+    url: 'https://cowaymall.com/',
+    selector: 'div, p, span, a, section, article',
+    type: 'mall'
+  },
+  {
+    name: '코웨이 멤버십',
+    url: 'https://www.coway.com/membership',
+    selector: 'div, p, span, a, section, article',
+    type: 'membership'
+  },
+  {
+    name: '코웨이 케어 서비스',
+    url: 'https://www.coway.com/service',
+    selector: 'div, p, span, a, section, article',
+    type: 'service'
   }
 ];
 
@@ -335,6 +353,16 @@ function getHighValueBackupData() {
       scraped: new Date().toISOString()
     },
     {
+      product: "⚡ 비렉스 트리플체어",
+      promotion: "🔥 안마의자 빅세일",
+      benefit: "렌탈료 60% 할인 (12개월) + 무료 안마 서비스 + 건강검진",
+      remark: "힐링케어 패키지",
+      source: "비렉스 공식",
+      priority: 9,
+      keywords: ["60%", "12개월", "무료"],
+      scraped: new Date().toISOString()
+    },
+    {
       product: "💨 제습기 4개 모델",
       promotion: "⚡ 제습기 반값 프로모션",
       benefit: "최대 12개월 렌탈료 50% 할인 + 동시구매시 추가 10% 할인",
@@ -342,6 +370,36 @@ function getHighValueBackupData() {
       source: "코웨이 공식",
       priority: 9,
       keywords: ["반값", "50%", "추가할인"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🌟 노블 프라임 정수기",
+      promotion: "💎 프리미엄 런칭 이벤트",
+      benefit: "6개월 무료 + 렌탈료 45% 할인 + 프리미엄 필터 1년 무료",
+      remark: "신제품 출시 기념",
+      source: "코웨이 공식",
+      priority: 9,
+      keywords: ["무료", "45%", "프리미엄"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🌪️ 공기청정기 전 라인업",
+      promotion: "🌿 깨끗한 공기 페스티벌",
+      benefit: "최대 15개월 렌탈료 40% 할인 + 미세먼지 측정기 증정",
+      remark: "미세먼지 시즌 특가",
+      source: "코웨이 공식",
+      priority: 8,
+      keywords: ["40%", "15개월", "증정"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🛏️ 슬립케어 매트리스",
+      promotion: "😴 숙면 케어 패키지",
+      benefit: "3개월 무료 체험 + 렌탈료 35% 할인 + 수면 컨설팅 서비스",
+      remark: "수면 건강 케어",
+      source: "비렉스 공식",
+      priority: 8,
+      keywords: ["무료", "35%", "컨설팅"],
       scraped: new Date().toISOString()
     },
     {
@@ -365,13 +423,93 @@ function getHighValueBackupData() {
       scraped: new Date().toISOString()
     },
     {
-      product: "⚡ 비렉스 트리플체어",
-      promotion: "🔥 안마의자 빅세일",
-      benefit: "렌탈료 60% 할인 (12개월) + 무료 안마 서비스 + 건강검진",
-      remark: "힐링케어 패키지",
-      source: "비렉스 공식",
+      product: "🔥 인덕션 쿡탑",
+      promotion: "👨‍🍳 스마트 쿠킹 이벤트",
+      benefit: "렌탈료 30% 할인 + 고급 조리도구 세트 증정 + 요리 클래스",
+      remark: "스마트홈 패키지",
+      source: "코웨이 인증점",
+      priority: 7,
+      keywords: ["30%", "증정", "클래스"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "👕 의류청정기 STYLER",
+      promotion: "✨ 의류 케어 혁신",
+      benefit: "4개월 무료 + 렌탈료 38% 할인 + 전용 행거 증정",
+      remark: "의류 관리 솔루션",
+      source: "코웨이 공식",
+      priority: 7,
+      keywords: ["무료", "38%", "증정"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "💧 연수기 프리미엄",
+      promotion: "🚿 물 케어 토탈 솔루션",
+      benefit: "2개월 무료 + 렌탈료 32% 할인 + 수질 검사 서비스",
+      remark: "수질 개선 패키지",
+      source: "코웨이 인증점",
+      priority: 7,
+      keywords: ["무료", "32%", "서비스"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🏠 코웨이 홈 패키지",
+      promotion: "🎉 올인원 홈케어 대축제",
+      benefit: "2개 이상 렌탈시 추가 20% 할인 + 케어서비스 6개월 무료",
+      remark: "복수 제품 할인",
+      source: "코웨이 공식",
+      priority: 8,
+      keywords: ["20%", "무료", "패키지"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "👶 베이비 케어 시리즈",
+      promotion: "🍼 우리 아이 건강 지킴이",
+      benefit: "신생아 특가 50% 할인 + 육아용품 세트 증정 + 전문 상담",
+      remark: "육아맘 전용 혜택",
+      source: "코웨이 인증점",
       priority: 9,
-      keywords: ["60%", "12개월", "무료"],
+      keywords: ["50%", "증정", "상담"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🎓 대학생 특가 패키지",
+      promotion: "📚 캠퍼스 라이프 지원",
+      benefit: "학생증 제시시 40% 할인 + 기숙사 무료배송 + 방학중 일시정지",
+      remark: "재학증명서 필요",
+      source: "코웨이 공식",
+      priority: 7,
+      keywords: ["40%", "무료", "학생"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🏢 사무실 단체 렌탈",
+      promotion: "💼 기업 맞춤 솔루션",
+      benefit: "10대 이상 렌탈시 45% 할인 + 무료 정기점검 + 전담 매니저",
+      remark: "기업 전용 혜택",
+      source: "코웨이 B2B",
+      priority: 8,
+      keywords: ["45%", "무료", "전담"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🎊 신혼부부 스페셜",
+      promotion: "💕 새출발 응원 패키지",
+      benefit: "혼인신고서 제시시 6개월 무료 + 35% 할인 + 신혼용품 증정",
+      remark: "결혼 3개월 이내",
+      source: "코웨이 인증점",
+      priority: 8,
+      keywords: ["무료", "35%", "증정"],
+      scraped: new Date().toISOString()
+    },
+    {
+      product: "🎯 재렌탈 고객 혜택",
+      promotion: "🔄 충성고객 리워드",
+      benefit: "기존 고객 30% 추가할인 + VIP 케어서비스 + 우선 A/S",
+      remark: "재계약 고객 전용",
+      source: "코웨이 공식",
+      priority: 7,
+      keywords: ["30%", "VIP", "우선"],
       scraped: new Date().toISOString()
     }
   ];
