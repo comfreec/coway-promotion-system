@@ -634,9 +634,8 @@
       
       <div id="individual-form" class="sms-form" style="display: none;">
         <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
-          📱 입력하신 정보로 기본 문자앱이 열립니다. 내용을 확인하고 발송 버튼을 눌러주세요.
+          📱 전화번호를 입력하면 기본 문자앱이 열립니다. 내용을 확인하고 발송 버튼을 눌러주세요.
         </p>
-        <input type="text" id="customer-name" class="sms-input" placeholder="고객명 (선택사항)">
         <input type="tel" id="customer-phone" class="sms-input" placeholder="휴대폰 번호 (01012345678)" required>
         <select id="promotion-select" class="sms-input">
           <option value="top3">상위 3개 프로모션</option>
@@ -1159,7 +1158,7 @@
     }
 
     function updateMessagePreview() {
-      const message = createSMSMessage(window.LIVE_PROMOTION_DATA, '고객');
+      const message = createSMSMessage(window.LIVE_PROMOTION_DATA); // 이름 파라미터 제거
       document.getElementById('message-preview').textContent = message;
       document.getElementById('message-length').textContent = message.length;
     }
@@ -1170,7 +1169,6 @@
     }
 
     function sendIndividualSMS() {
-      const customerName = document.getElementById('customer-name').value;
       const customerPhone = document.getElementById('customer-phone').value;
       const promotionSelect = document.getElementById('promotion-select').value;
       
@@ -1187,17 +1185,17 @@
         return;
       }
       
-      // 프로모션 선택에 따른 메시지 생성
+      // 프로모션 선택에 따른 메시지 생성 (이름 없이)
       let selectedPromotions = [];
       if (promotionSelect === 'top3') {
         selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 3);
       } else if (promotionSelect === 'all') {
-        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 5); // 너무 길어지지 않게 5개로 제한
+        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 5);
       } else {
-        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 3); // 기본값
+        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 3);
       }
       
-      const message = createSMSMessage(selectedPromotions, customerName);
+      const message = createSMSMessage(selectedPromotions); // 이름 파라미터 제거
       
       // SMS URL 스키마로 기본 문자 앱 열기
       const smsUrl = `sms:${cleanPhone}?body=${encodeURIComponent(message)}`;
@@ -1206,9 +1204,8 @@
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // 모바일: 바로 문자 앱 열기
+        // 모바일: 바로 문자 앱 열기 (알림 제거)
         window.location.href = smsUrl;
-        alert(`📱 ${customerName || '고객'}님에게 보낼 문자 앱이 열립니다.\n발송 버튼을 눌러서 전송해주세요!`);
       } else {
         // 데스크톱: 문자 내용을 복사할 수 있도록 표시
         if (confirm(`💻 데스크톱에서는 문자 내용을 복사하여 직접 발송해주세요.\n\n받는 사람: ${cleanPhone}\n\n문자 내용을 클립보드에 복사하시겠습니까?`)) {
@@ -1245,10 +1242,10 @@
         function sendToNextCustomer() {
           if (currentIndex < customerDB.length) {
             const customer = customerDB[currentIndex];
-            const personalMessage = createSMSMessage(window.LIVE_PROMOTION_DATA.slice(0, 3), customer.name);
+            const personalMessage = createSMSMessage(window.LIVE_PROMOTION_DATA.slice(0, 3)); // 이름 제거
             const smsUrl = `sms:${customer.phone}?body=${encodeURIComponent(personalMessage)}`;
             
-            if (confirm(`📱 ${customer.name}님(${customer.phone})에게 문자를 보내시겠습니까?\n\n다음 고객: ${currentIndex + 1}/${customerDB.length}`)) {
+            if (confirm(`📱 ${customer.name}님(${customer.phone})에게 문자앱을 열까요?\n\n진행상황: ${currentIndex + 1}/${customerDB.length}`)) {
               window.location.href = smsUrl;
               currentIndex++;
               
@@ -1260,9 +1257,8 @@
               currentIndex++;
               sendToNextCustomer();
             }
-          } else {
-            alert('✅ 모든 고객에 대한 문자 발송이 완료되었습니다!');
           }
+          // 완료 알림 제거
         }
         
         sendToNextCustomer();
