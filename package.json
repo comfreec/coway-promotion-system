@@ -5,6 +5,11 @@
   "main": "scraper.js",
   "scripts": {
     "scrape": "node scraper.js",
+    "sms": "node sms-sender.js",
+    "sms:test": "node sms-sender.js --test",
+    "sms:bulk": "node sms-sender.js --bulk",
+    "sms:weekly": "node sms-sender.js --weekly",
+    "sms:emergency": "node sms-sender.js --emergency",
     "test": "echo \"스크래핑 테스트 실행...\" && node scraper.js"
   },
   "dependencies": {

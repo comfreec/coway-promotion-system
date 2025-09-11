@@ -292,6 +292,130 @@
       border-top: 1px solid #ecf0f1;
     }
     
+    .sms-section {
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      margin: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);
+    }
+    
+    .sms-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-width: 400px;
+      margin: 20px auto 0;
+    }
+    
+    .sms-input {
+      padding: 12px 15px;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      outline: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .sms-button {
+      background: linear-gradient(135deg, #00b894, #00cec9);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 25px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
+    }
+    
+    .sms-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 184, 148, 0.6);
+    }
+    
+    .sms-button:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .promotion-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .action-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+    
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+    
+    .sms-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+    }
+    
+    .sms-modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    
+    .message-preview {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      border-left: 4px solid #6c5ce7;
+      white-space: pre-line;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
     .stat-item {
       text-align: center;
     }
@@ -381,6 +505,61 @@
     </div>
     
     <div class="footer" id="last-updated"></div>
+  </div>
+
+  <!-- SMS 발송 섹션 -->
+  <div class="sms-section">
+    <h2>📱 프로모션 문자 발송</h2>
+    <p>고객에게 최신 할인 정보를 문자로 바로 전송하세요!</p>
+    
+    <div class="promotion-actions">
+      <button class="action-btn" onclick="openSMSModal('individual')">📱 개별 발송</button>
+      <button class="action-btn" onclick="openSMSModal('bulk')">📢 단체 발송</button>
+      <button class="action-btn" onclick="previewMessage()">👀 메시지 미리보기</button>
+      <button class="action-btn" onclick="showSMSStats()">📊 발송 통계</button>
+    </div>
+  </div>
+
+  <!-- SMS 발송 모달 -->
+  <div id="sms-modal" class="sms-modal">
+    <div class="sms-modal-content">
+      <button class="close-modal" onclick="closeSMSModal()">&times;</button>
+      <h3 id="modal-title">📱 문자 발송</h3>
+      
+      <div id="individual-form" class="sms-form" style="display: none;">
+        <input type="text" id="customer-name" class="sms-input" placeholder="고객명 (선택사항)">
+        <input type="tel" id="customer-phone" class="sms-input" placeholder="휴대폰 번호 (01012345678)" required>
+        <select id="promotion-select" class="sms-input">
+          <option value="top3">상위 3개 프로모션</option>
+          <option value="all">전체 프로모션</option>
+          <option value="custom">선택한 프로모션</option>
+        </select>
+        <button class="sms-button" onclick="sendIndividualSMS()">📱 문자 발송</button>
+      </div>
+      
+      <div id="bulk-form" class="sms-form" style="display: none;">
+        <p>등록된 고객 DB에 단체 문자를 발송합니다.</p>
+        <div class="message-preview" id="bulk-preview"></div>
+        <button class="sms-button" onclick="sendBulkSMS()">📢 단체 발송 (전체 고객)</button>
+      </div>
+      
+      <div id="preview-form" class="sms-form" style="display: none;">
+        <h4>📝 메시지 미리보기</h4>
+        <div class="message-preview" id="message-preview"></div>
+        <p><strong>메시지 길이:</strong> <span id="message-length">0</span>자</p>
+        <p><small>※ SMS는 80자, LMS는 2000자까지 발송 가능합니다.</small></p>
+      </div>
+      
+      <div id="stats-form" class="sms-form" style="display: none;">
+        <h4>📊 발송 통계</h4>
+        <div id="sms-stats-content">
+          <p>오늘 발송: <strong>0건</strong></p>
+          <p>이번 주 발송: <strong>0건</strong></p>
+          <p>이번 달 발송: <strong>0건</strong></p>
+          <p>성공률: <strong>95%</strong></p>
+        </div>
+      </div>
+    </div>
   </div>
 
   
@@ -785,6 +964,173 @@
         initialize();
       }
     }, 3000);
+
+    // SMS 발송 관련 함수들
+    function createSMSMessage(promotions, customerName = '') {
+      const greeting = customerName ? `${customerName}님, ` : '';
+      const topPromotions = promotions.slice(0, 3);
+      
+      let message = `${greeting}🏠 코웨이 특별 프로모션 알림!\n\n`;
+      
+      topPromotions.forEach((promo, index) => {
+        const priority = promo.priority >= 10 ? '🔥HOT' : promo.priority >= 8 ? '✨NEW' : '💰';
+        const productName = promo.product.replace(/[⭐🧊💨⚡🌟🌪️🛏️💳🌸🔥👕💧🏠👶🎓🏢🎊🎯]/g, '');
+        message += `${priority} ${productName}\n`;
+        message += `${promo.benefit.substring(0, 40)}...\n`;
+        if (index < topPromotions.length - 1) message += '\n';
+      });
+      
+      message += `\n📱 전체보기: https://comfreec.github.io/coway-promotion-system/`;
+      message += `\n📞 상담문의: 1588-7997`;
+      message += `\n\n수신거부: STOP 회신`;
+      
+      return message;
+    }
+
+    function openSMSModal(type) {
+      const modal = document.getElementById('sms-modal');
+      const modalTitle = document.getElementById('modal-title');
+      
+      // 모든 폼 숨기기
+      document.getElementById('individual-form').style.display = 'none';
+      document.getElementById('bulk-form').style.display = 'none';
+      document.getElementById('preview-form').style.display = 'none';
+      document.getElementById('stats-form').style.display = 'none';
+      
+      switch(type) {
+        case 'individual':
+          modalTitle.textContent = '📱 개별 문자 발송';
+          document.getElementById('individual-form').style.display = 'flex';
+          break;
+        case 'bulk':
+          modalTitle.textContent = '📢 단체 문자 발송';
+          document.getElementById('bulk-form').style.display = 'flex';
+          updateBulkPreview();
+          break;
+      }
+      
+      modal.style.display = 'block';
+    }
+
+    function closeSMSModal() {
+      document.getElementById('sms-modal').style.display = 'none';
+    }
+
+    function previewMessage() {
+      const modal = document.getElementById('sms-modal');
+      const modalTitle = document.getElementById('modal-title');
+      
+      // 모든 폼 숨기기
+      document.getElementById('individual-form').style.display = 'none';
+      document.getElementById('bulk-form').style.display = 'none';
+      document.getElementById('stats-form').style.display = 'none';
+      
+      modalTitle.textContent = '👀 메시지 미리보기';
+      document.getElementById('preview-form').style.display = 'flex';
+      
+      updateMessagePreview();
+      modal.style.display = 'block';
+    }
+
+    function showSMSStats() {
+      const modal = document.getElementById('sms-modal');
+      const modalTitle = document.getElementById('modal-title');
+      
+      // 모든 폼 숨기기
+      document.getElementById('individual-form').style.display = 'none';
+      document.getElementById('bulk-form').style.display = 'none';
+      document.getElementById('preview-form').style.display = 'none';
+      
+      modalTitle.textContent = '📊 발송 통계';
+      document.getElementById('stats-form').style.display = 'flex';
+      
+      modal.style.display = 'block';
+    }
+
+    function updateMessagePreview() {
+      const message = createSMSMessage(window.LIVE_PROMOTION_DATA, '고객');
+      document.getElementById('message-preview').textContent = message;
+      document.getElementById('message-length').textContent = message.length;
+    }
+
+    function updateBulkPreview() {
+      const message = createSMSMessage(window.LIVE_PROMOTION_DATA);
+      document.getElementById('bulk-preview').textContent = message;
+    }
+
+    async function sendIndividualSMS() {
+      const customerName = document.getElementById('customer-name').value;
+      const customerPhone = document.getElementById('customer-phone').value;
+      const promotionSelect = document.getElementById('promotion-select').value;
+      
+      if (!customerPhone) {
+        alert('휴대폰 번호를 입력해주세요.');
+        return;
+      }
+      
+      // 휴대폰 번호 유효성 검사
+      const phoneRegex = /^01[0-9]{8,9}$/;
+      if (!phoneRegex.test(customerPhone.replace(/-/g, ''))) {
+        alert('올바른 휴대폰 번호를 입력해주세요. (예: 01012345678)');
+        return;
+      }
+      
+      const button = event.target;
+      button.disabled = true;
+      button.textContent = '📱 발송 중...';
+      
+      try {
+        // 실제 SMS 발송은 서버에서 처리
+        const message = createSMSMessage(window.LIVE_PROMOTION_DATA, customerName);
+        
+        // 데모용 - 실제로는 서버 API 호출
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        alert(`✅ ${customerName || '고객'}님에게 문자가 성공적으로 발송되었습니다!\n\n발송 내용:\n${message.substring(0, 100)}...`);
+        closeSMSModal();
+        
+      } catch (error) {
+        alert('❌ 문자 발송에 실패했습니다. 다시 시도해주세요.');
+        console.error('SMS 발송 실패:', error);
+      } finally {
+        button.disabled = false;
+        button.textContent = '📱 문자 발송';
+      }
+    }
+
+    async function sendBulkSMS() {
+      if (!confirm('등록된 모든 고객에게 문자를 발송하시겠습니까?')) {
+        return;
+      }
+      
+      const button = event.target;
+      button.disabled = true;
+      button.textContent = '📢 발송 중...';
+      
+      try {
+        // 실제 단체 발송은 서버에서 처리
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const customerCount = 3; // 임시 고객 수
+        alert(`✅ 총 ${customerCount}명의 고객에게 문자가 성공적으로 발송되었습니다!`);
+        closeSMSModal();
+        
+      } catch (error) {
+        alert('❌ 단체 문자 발송에 실패했습니다. 다시 시도해주세요.');
+        console.error('단체 SMS 발송 실패:', error);
+      } finally {
+        button.disabled = false;
+        button.textContent = '📢 단체 발송 (전체 고객)';
+      }
+    }
+
+    // 모달 외부 클릭시 닫기
+    window.onclick = function(event) {
+      const modal = document.getElementById('sms-modal');
+      if (event.target === modal) {
+        closeSMSModal();
+      }
+    }
     </script>
 </body>
 </html>

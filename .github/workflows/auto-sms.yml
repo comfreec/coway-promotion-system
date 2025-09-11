@@ -1,0 +1,95 @@
+name: 자동 SMS 발송 시스템
+
+on:
+  schedule:
+    # 매일 오전 9시에 실행 (KST)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 수동 실행 가능
+  
+  # 새로운 프로모션이 추가될 때 자동 실행
+  repository_dispatch:
+    types: [new-promotion-alert]
+
+jobs:
+  send-sms-notifications:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 코드 체크아웃
+      uses: actions/checkout@v4
+      
+    - name: 🟢 Node.js 설정
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: 📦 의존성 설치
+      run: npm install
+      
+    - name: 🔍 프로모션 변경사항 확인
+      id: check-changes
+      run: |
+        # 최근 24시간 내 프로모션 파일 변경 확인
+        CHANGES=$(git log --since="24 hours ago" --oneline --name-only | grep -E "(promotions.json|index.html)" | wc -l)
+        echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+        echo "📊 최근 24시간 내 프로모션 관련 변경: $CHANGES건"
+        
+    - name: 📱 신규 프로모션 긴급 알림
+      if: steps.check-changes.outputs.changes > 0
+      env:
+        COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
+        COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
+        SMS_SENDER: ${{ secrets.SMS_SENDER }}
+      run: |
+        echo "🚨 신규 프로모션 발견! 긴급 알림 발송"
+        node sms-sender.js --emergency
+        
+    - name: 📢 정기 프로모션 알림 (월요일)
+      if: github.event.schedule && format('{0}', 'monday') == format('{0}', steps.date.outputs.day)
+      env:
+        COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
+        COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
+        SMS_SENDER: ${{ secrets.SMS_SENDER }}
+      run: |
+        echo "📅 주간 정기 프로모션 알림 발송"
+        node sms-sender.js --weekly
+        
+    - name: 🎯 맞춤 프로모션 알림 (수요일)
+      if: github.event.schedule && format('{0}', 'wednesday') == format('{0}', steps.date.outputs.day)
+      env:
+        COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
+        COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
+        SMS_SENDER: ${{ secrets.SMS_SENDER }}
+      run: |
+        echo "🎯 고객 맞춤 프로모션 알림 발송"
+        node sms-sender.js --personalized
+        
+    - name: 📊 발송 결과 업로드
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sms-report-${{ github.run_number }}
+        path: sms-report.json
+        retention-days: 30
+        
+    - name: 💬 Slack 알림 (선택사항)
+      if: failure()
+      run: |
+        echo "❌ SMS 발송 실패 알림을 Slack으로 전송할 수 있습니다"
+        # Slack webhook 설정 시 사용
+        
+    - name: 📈 발송 통계 커밋
+      if: steps.check-changes.outputs.changes > 0
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # 발송 통계를 README에 추가
+        echo "## 📱 최근 SMS 발송 현황" >> SMS_STATS.md
+        echo "- 발송 시간: $(date '+%Y-%m-%d %H:%M:%S')" >> SMS_STATS.md
+        echo "- 변경사항: ${{ steps.check-changes.outputs.changes }}건" >> SMS_STATS.md
+        echo "" >> SMS_STATS.md
+        
+        git add SMS_STATS.md sms-report.json
+        git commit -m "📱 SMS 발송 통계 업데이트 $(date '+%Y-%m-%d')" || exit 0
+        git push
