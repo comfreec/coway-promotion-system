@@ -633,20 +633,25 @@
       <h3 id="modal-title">📱 문자 발송</h3>
       
       <div id="individual-form" class="sms-form" style="display: none;">
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+          📱 입력하신 정보로 기본 문자앱이 열립니다. 내용을 확인하고 발송 버튼을 눌러주세요.
+        </p>
         <input type="text" id="customer-name" class="sms-input" placeholder="고객명 (선택사항)">
         <input type="tel" id="customer-phone" class="sms-input" placeholder="휴대폰 번호 (01012345678)" required>
         <select id="promotion-select" class="sms-input">
           <option value="top3">상위 3개 프로모션</option>
-          <option value="all">전체 프로모션</option>
-          <option value="custom">선택한 프로모션</option>
+          <option value="all">상위 5개 프로모션</option>
+          <option value="custom">맞춤 프로모션</option>
         </select>
-        <button class="sms-button" onclick="sendIndividualSMS()">📱 문자 발송</button>
+        <button class="sms-button" onclick="sendIndividualSMS()">📱 문자앱 열기</button>
       </div>
       
       <div id="bulk-form" class="sms-form" style="display: none;">
-        <p>등록된 고객 DB에 단체 문자를 발송합니다.</p>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+          📢 등록된 고객들에게 순차적으로 문자앱이 열립니다. 각각 확인하고 발송해주세요.
+        </p>
         <div class="message-preview" id="bulk-preview"></div>
-        <button class="sms-button" onclick="sendBulkSMS()">📢 단체 발송 (전체 고객)</button>
+        <button class="sms-button" onclick="sendBulkSMS()">📢 단체 문자앱 열기</button>
       </div>
       
       <div id="preview-form" class="sms-form" style="display: none;">
@@ -1164,7 +1169,7 @@
       document.getElementById('bulk-preview').textContent = message;
     }
 
-    async function sendIndividualSMS() {
+    function sendIndividualSMS() {
       const customerName = document.getElementById('customer-name').value;
       const customerPhone = document.getElementById('customer-phone').value;
       const promotionSelect = document.getElementById('promotion-select').value;
@@ -1174,60 +1179,112 @@
         return;
       }
       
-      // 휴대폰 번호 유효성 검사
+      // 휴대폰 번호 유효성 검사 및 포맷팅
+      const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
       const phoneRegex = /^01[0-9]{8,9}$/;
-      if (!phoneRegex.test(customerPhone.replace(/-/g, ''))) {
+      if (!phoneRegex.test(cleanPhone)) {
         alert('올바른 휴대폰 번호를 입력해주세요. (예: 01012345678)');
         return;
       }
       
-      const button = event.target;
-      button.disabled = true;
-      button.textContent = '📱 발송 중...';
-      
-      try {
-        // 실제 SMS 발송은 서버에서 처리
-        const message = createSMSMessage(window.LIVE_PROMOTION_DATA, customerName);
-        
-        // 데모용 - 실제로는 서버 API 호출
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        alert(`✅ ${customerName || '고객'}님에게 문자가 성공적으로 발송되었습니다!\n\n발송 내용:\n${message.substring(0, 100)}...`);
-        closeSMSModal();
-        
-      } catch (error) {
-        alert('❌ 문자 발송에 실패했습니다. 다시 시도해주세요.');
-        console.error('SMS 발송 실패:', error);
-      } finally {
-        button.disabled = false;
-        button.textContent = '📱 문자 발송';
+      // 프로모션 선택에 따른 메시지 생성
+      let selectedPromotions = [];
+      if (promotionSelect === 'top3') {
+        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 3);
+      } else if (promotionSelect === 'all') {
+        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 5); // 너무 길어지지 않게 5개로 제한
+      } else {
+        selectedPromotions = window.LIVE_PROMOTION_DATA.slice(0, 3); // 기본값
       }
+      
+      const message = createSMSMessage(selectedPromotions, customerName);
+      
+      // SMS URL 스키마로 기본 문자 앱 열기
+      const smsUrl = `sms:${cleanPhone}?body=${encodeURIComponent(message)}`;
+      
+      // 모바일과 데스크톱 환경 구분
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // 모바일: 바로 문자 앱 열기
+        window.location.href = smsUrl;
+        alert(`📱 ${customerName || '고객'}님에게 보낼 문자 앱이 열립니다.\n발송 버튼을 눌러서 전송해주세요!`);
+      } else {
+        // 데스크톱: 문자 내용을 복사할 수 있도록 표시
+        if (confirm(`💻 데스크톱에서는 문자 내용을 복사하여 직접 발송해주세요.\n\n받는 사람: ${cleanPhone}\n\n문자 내용을 클립보드에 복사하시겠습니까?`)) {
+          navigator.clipboard.writeText(message).then(() => {
+            alert('📋 문자 내용이 클립보드에 복사되었습니다!\n휴대폰으로 직접 발송해주세요.');
+          }).catch(() => {
+            // 클립보드 복사 실패시 텍스트로 표시
+            prompt('📋 아래 내용을 복사해서 문자로 발송해주세요:', message);
+          });
+        }
+      }
+      
+      closeSMSModal();
     }
 
-    async function sendBulkSMS() {
-      if (!confirm('등록된 모든 고객에게 문자를 발송하시겠습니까?')) {
+    function sendBulkSMS() {
+      const customerDB = [
+        { name: '김고객', phone: '01012345678' },
+        { name: '박고객', phone: '01098765432' },
+        { name: '이고객', phone: '01055555555' }
+      ];
+      
+      if (!confirm(`등록된 ${customerDB.length}명의 고객에게 문자를 발송하시겠습니까?\n(각각의 문자 앱이 열립니다)`)) {
         return;
       }
       
-      const button = event.target;
-      button.disabled = true;
-      button.textContent = '📢 발송 중...';
+      const message = createSMSMessage(window.LIVE_PROMOTION_DATA.slice(0, 3));
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
-      try {
-        // 실제 단체 발송은 서버에서 처리
-        await new Promise(resolve => setTimeout(resolve, 3000));
+      if (isMobile) {
+        // 모바일: 첫 번째 고객부터 순차적으로 문자 앱 열기
+        let currentIndex = 0;
         
-        const customerCount = 3; // 임시 고객 수
-        alert(`✅ 총 ${customerCount}명의 고객에게 문자가 성공적으로 발송되었습니다!`);
-        closeSMSModal();
+        function sendToNextCustomer() {
+          if (currentIndex < customerDB.length) {
+            const customer = customerDB[currentIndex];
+            const personalMessage = createSMSMessage(window.LIVE_PROMOTION_DATA.slice(0, 3), customer.name);
+            const smsUrl = `sms:${customer.phone}?body=${encodeURIComponent(personalMessage)}`;
+            
+            if (confirm(`📱 ${customer.name}님(${customer.phone})에게 문자를 보내시겠습니까?\n\n다음 고객: ${currentIndex + 1}/${customerDB.length}`)) {
+              window.location.href = smsUrl;
+              currentIndex++;
+              
+              // 3초 후 다음 고객으로
+              setTimeout(() => {
+                sendToNextCustomer();
+              }, 3000);
+            } else {
+              currentIndex++;
+              sendToNextCustomer();
+            }
+          } else {
+            alert('✅ 모든 고객에 대한 문자 발송이 완료되었습니다!');
+          }
+        }
         
-      } catch (error) {
-        alert('❌ 단체 문자 발송에 실패했습니다. 다시 시도해주세요.');
-        console.error('단체 SMS 발송 실패:', error);
-      } finally {
-        button.disabled = false;
-        button.textContent = '📢 단체 발송 (전체 고객)';
+        sendToNextCustomer();
+        
+      } else {
+        // 데스크톱: 고객 목록과 전화번호를 표시
+        let bulkMessage = '📋 단체 발송용 고객 목록\n\n';
+        customerDB.forEach((customer, index) => {
+          bulkMessage += `${index + 1}. ${customer.name}: ${customer.phone}\n`;
+        });
+        bulkMessage += `\n📝 발송할 메시지:\n${message}`;
+        
+        if (confirm('💻 데스크톱에서는 고객 목록과 메시지를 복사하여 직접 발송해주세요.\n클립보드에 복사하시겠습니까?')) {
+          navigator.clipboard.writeText(bulkMessage).then(() => {
+            alert('📋 고객 목록과 메시지가 클립보드에 복사되었습니다!\n각 고객에게 개별적으로 발송해주세요.');
+          }).catch(() => {
+            prompt('📋 아래 내용을 참고해서 각 고객에게 문자를 발송해주세요:', bulkMessage);
+          });
+        }
       }
+      
+      closeSMSModal();
     }
 
     // 모달 외부 클릭시 닫기
