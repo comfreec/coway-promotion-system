@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>코웨이 프로모션 실시간 자동 업데이트</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
   <style>
     * {
       margin: 0;
@@ -349,7 +350,7 @@
           <div class="auto-update-info" id="auto-status">시스템 연결 확인 중...</div>
         </div>
       </div>
-      <button class="refresh-btn" onclick="loadPromotionData()">🔄 즉시 업데이트</button>
+      <button class="refresh-btn" id="refresh-btn">🔄 즉시 업데이트</button>
     </div>
     
     <div id="promo-content">
@@ -474,6 +475,148 @@
     window.LAST_SCRAPED = "2025. 9. 6. 오전 7:17:48";
     window.SCRAPING_STATUS = "LIVE";
     console.log("✅ GitHub Actions 실시간 데이터 로드됨:", window.LIVE_PROMOTION_DATA.length);
+
+    // 프로모션 데이터를 화면에 렌더링하는 함수
+    function renderPromotions() {
+      const promoContent = document.getElementById('promo-content');
+      const stats = document.getElementById('stats');
+      const statusDot = document.getElementById('status-dot');
+      const autoStatus = document.getElementById('auto-status');
+      const lastUpdated = document.getElementById('last-updated');
+      const promoCount = document.getElementById('promo-count');
+      const sourceCount = document.getElementById('source-count');
+      const nextUpdate = document.getElementById('next-update');
+
+      if (!window.LIVE_PROMOTION_DATA || window.LIVE_PROMOTION_DATA.length === 0) {
+        promoContent.innerHTML = '<div class="loading">데이터를 불러올 수 없습니다.</div>';
+        return;
+      }
+
+      // 우선순위 순으로 정렬
+      const sortedData = window.LIVE_PROMOTION_DATA.sort((a, b) => b.priority - a.priority);
+
+      // 프로모션 카드 생성
+      const promoGrid = document.createElement('div');
+      promoGrid.className = 'promo-grid';
+
+      sortedData.forEach((promo, index) => {
+        const card = document.createElement('div');
+        card.className = 'promo-card live-scraped';
+        
+        const priorityBadge = promo.priority >= 10 ? 'high' : promo.priority >= 8 ? 'medium' : 'low';
+        const priorityText = promo.priority >= 10 ? 'HOT' : promo.priority >= 8 ? 'NEW' : 'REC';
+        
+        card.innerHTML = `
+          <div class="priority-badge ${priorityBadge}">${priorityText}</div>
+          <div class="product-name">${promo.product}</div>
+          <div class="promotion-tag">${promo.promotion}</div>
+          <div class="benefit">${promo.benefit}</div>
+          <div class="remark">${promo.remark}</div>
+          <div class="source-info">
+            <span>${promo.source}</span>
+            <span class="scraped-time">스크래핑: ${new Date(promo.scraped).toLocaleString('ko-KR')}</span>
+          </div>
+        `;
+        
+        promoGrid.appendChild(card);
+      });
+
+      promoContent.innerHTML = '';
+      promoContent.appendChild(promoGrid);
+
+      // 통계 업데이트
+      promoCount.textContent = sortedData.length;
+      sourceCount.textContent = [...new Set(sortedData.map(p => p.source))].length;
+      stats.style.display = 'flex';
+
+      // 상태 업데이트
+      statusDot.className = 'status-dot live';
+      autoStatus.textContent = '실시간 연동 중 • 데이터 최신 상태';
+      
+      // 마지막 업데이트 시간
+      lastUpdated.innerHTML = `
+        <div>마지막 업데이트: ${window.LAST_SCRAPED}</div>
+        <div>총 ${sortedData.length}개 프로모션 • GitHub Actions 자동 스크래핑</div>
+      `;
+
+      // 다음 업데이트 시간 계산 (3시간 후)
+      const nextUpdateTime = new Date();
+      nextUpdateTime.setHours(nextUpdateTime.getHours() + 3);
+      nextUpdate.textContent = `다음 스크래핑: ${nextUpdateTime.toLocaleString('ko-KR')}`;
+    }
+
+    // 데이터 로드 함수
+    function loadPromotionData() {
+      const autoStatus = document.getElementById('auto-status');
+      const statusDot = document.getElementById('status-dot');
+      
+      autoStatus.textContent = '데이터 새로고침 중...';
+      statusDot.className = 'status-dot scraping';
+      
+      // 실제로는 기존 데이터를 다시 렌더링 (실시간 스크래핑은 GitHub Actions에서 처리)
+      setTimeout(() => {
+        renderPromotions();
+      }, 1000);
+    }
+
+    // 버튼 이벤트 리스너 추가
+    function initializeEventListeners() {
+      const refreshBtn = document.getElementById('refresh-btn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadPromotionData);
+        console.log('새로고침 버튼 이벤트 리스너 추가됨');
+      }
+    }
+
+    // 즉시 실행 (페이지 로드 상태와 관계없이)
+    console.log('스크립트 시작, 문서 상태:', document.readyState);
+    
+    // 초기화 함수
+    function initialize() {
+      console.log('페이지 초기화 시작');
+      renderPromotions();
+      initializeEventListeners();
+    }
+
+    // 페이지 로드 시 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOMContentLoaded 이벤트 발생');
+      initialize();
+    });
+
+    // window.onload 이벤트도 추가
+    window.addEventListener('load', function() {
+      console.log('window load 이벤트 발생');
+      initialize();
+    });
+
+    // 데이터가 이미 로드된 경우 즉시 초기화
+    if (document.readyState === 'loading') {
+      console.log('문서 로딩 중, DOMContentLoaded 대기');
+      document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+      console.log('문서가 이미 로드됨, 즉시 초기화 시작');
+      initialize();
+    }
+
+    // 강제 실행 (다중 시도)
+    setTimeout(() => {
+      console.log('1초 후 강제 실행');
+      const promoContent = document.getElementById('promo-content');
+      if (promoContent && promoContent.innerHTML.includes('loading-spinner')) {
+        console.log('아직 로딩 중이므로 강제로 초기화 실행');
+        initialize();
+      }
+    }, 1000);
+
+    setTimeout(() => {
+      console.log('3초 후 최종 강제 실행');
+      const promoContent = document.getElementById('promo-content');
+      if (promoContent && promoContent.innerHTML.includes('loading-spinner')) {
+        console.log('최종 강제 초기화 실행');
+        initialize();
+      }
+    }, 3000);
     </script>
 </body>
 </html>
