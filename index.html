@@ -300,6 +300,41 @@
       margin: 20px;
       border-radius: 15px;
       box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);
+      animation: smsGlow 3s ease-in-out infinite alternate;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+    
+    @keyframes smsGlow {
+      from { 
+        box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);
+        transform: scale(1);
+      }
+      to { 
+        box-shadow: 0 12px 35px rgba(108, 92, 231, 0.5);
+        transform: scale(1.02);
+      }
+    }
+    
+    .sms-section::before {
+      content: "🔥 NEW FEATURE";
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff6b6b;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      animation: bounce 2s infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+      40% { transform: translateX(-50%) translateY(-5px); }
+      60% { transform: translateX(-50%) translateY(-3px); }
     }
     
     .sms-form {
@@ -453,6 +488,77 @@
       .promo-card { padding: 15px; }
       .product-name { font-size: 1.1rem; }
       .status-bar { padding: 12px; }
+      
+      /* SMS 섹션 모바일 최적화 */
+      .sms-section {
+        margin: 10px 5px;
+        padding: 15px;
+        border-radius: 12px;
+      }
+      
+      .sms-section h2 {
+        font-size: 1.3rem;
+        margin-bottom: 8px;
+      }
+      
+      .sms-section p {
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+      }
+      
+      .promotion-actions {
+        gap: 8px;
+        flex-direction: column;
+      }
+      
+      .action-btn {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 0.9rem;
+        border-radius: 25px;
+        margin: 0;
+      }
+      
+      /* SMS 모달 모바일 최적화 */
+      .sms-modal-content {
+        width: 95%;
+        padding: 20px;
+        margin: 10px;
+      }
+      
+      .sms-input {
+        padding: 15px;
+        font-size: 16px; /* iOS 줌 방지 */
+        border-radius: 12px;
+      }
+      
+      .sms-button {
+        padding: 18px 25px;
+        font-size: 1rem;
+        border-radius: 12px;
+      }
+      
+      .message-preview {
+        font-size: 0.85rem;
+        padding: 12px;
+      }
+    }
+    
+    /* 더 작은 모바일 화면 (iPhone SE 등) */
+    @media (max-width: 480px) {
+      .sms-section {
+        margin: 5px;
+        padding: 12px;
+      }
+      
+      .promotion-actions {
+        gap: 6px;
+      }
+      
+      .action-btn {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+      }
     }
   </style>
 </head>
@@ -465,6 +571,19 @@
     </div>
   </div>
   
+  <!-- SMS 발송 섹션 (상단 배치) -->
+  <div class="sms-section">
+    <h2>📱 프로모션 문자 발송</h2>
+    <p>고객에게 최신 할인 정보를 문자로 바로 전송하세요!</p>
+    
+    <div class="promotion-actions">
+      <button class="action-btn" onclick="openSMSModal('individual')">📱 개별 발송</button>
+      <button class="action-btn" onclick="openSMSModal('bulk')">📢 단체 발송</button>
+      <button class="action-btn" onclick="previewMessage()">👀 메시지 미리보기</button>
+      <button class="action-btn" onclick="showSMSStats()">📊 발송 통계</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="status-bar">
       <div class="status-left">
@@ -505,19 +624,6 @@
     </div>
     
     <div class="footer" id="last-updated"></div>
-  </div>
-
-  <!-- SMS 발송 섹션 -->
-  <div class="sms-section">
-    <h2>📱 프로모션 문자 발송</h2>
-    <p>고객에게 최신 할인 정보를 문자로 바로 전송하세요!</p>
-    
-    <div class="promotion-actions">
-      <button class="action-btn" onclick="openSMSModal('individual')">📱 개별 발송</button>
-      <button class="action-btn" onclick="openSMSModal('bulk')">📢 단체 발송</button>
-      <button class="action-btn" onclick="previewMessage()">👀 메시지 미리보기</button>
-      <button class="action-btn" onclick="showSMSStats()">📊 발송 통계</button>
-    </div>
   </div>
 
   <!-- SMS 발송 모달 -->
