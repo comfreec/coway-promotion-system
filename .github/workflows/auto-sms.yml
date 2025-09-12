@@ -26,6 +26,11 @@ jobs:
     - name: 📦 의존성 설치
       run: npm install
       
+    - name: 🕷️ 프로모션 스크래핑 실행
+      run: |
+        echo "🔄 최신 프로모션 데이터 수집 중..."
+        node scraper.js
+        
     - name: 📅 현재 날짜 설정
       id: date
       run: |
@@ -84,14 +89,21 @@ jobs:
         echo "❌ SMS 발송 실패 알림을 Slack으로 전송할 수 있습니다"
         # Slack webhook 설정 시 사용
         
-    - name: 📈 발송 통계 커밋
-      if: steps.check-changes.outputs.changes > 0
+    - name: 📈 스크래핑 데이터 커밋
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # 발송 통계를 README에 추가
-        echo "## 📱 최근 SMS 발송 현황" >> SMS_STATS.md
+        # 스크래핑된 데이터 커밋
+        git add promotions.json index.html
+        git commit -m "🤖 프로모션 데이터 자동 업데이트 $(date '+%Y-%m-%d %H:%M:%S')" || exit 0
+        git push
+        
+    - name: 📊 발송 통계 기록
+      if: steps.check-changes.outputs.changes > 0
+      run: |
+        # 발송 통계를 파일에 추가
+        echo "## 📱 SMS 발송 현황" >> SMS_STATS.md
         echo "- 발송 시간: $(date '+%Y-%m-%d %H:%M:%S')" >> SMS_STATS.md
         echo "- 변경사항: ${{ steps.check-changes.outputs.changes }}건" >> SMS_STATS.md
         echo "" >> SMS_STATS.md
