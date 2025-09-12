@@ -3,7 +3,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// 스크래핑할 사이트들 (대폭 확장된 리스트)
+// 스크래핑할 사이트들 (공식 사이트만)
 const SCRAPE_TARGETS = [
   {
     name: '코웨이 공식 홈페이지',
@@ -13,57 +13,33 @@ const SCRAPE_TARGETS = [
   },
   {
     name: '코웨이 이벤트 페이지',
-    url: 'https://www.coway.com/event/list',
+    url: 'https://www.coway.com/event',
     selector: 'div, p, span, a, section, article',
     type: 'event'
   },
   {
-    name: '코웨이 제품 페이지 - 정수기',
+    name: '코웨이 프로모션 페이지',
+    url: 'https://www.coway.com/promotion',
+    selector: 'div, p, span, a, section, article',
+    type: 'promotion'
+  },
+  {
+    name: '코웨이 렌탈 페이지',
+    url: 'https://www.coway.com/rental',
+    selector: 'div, p, span, a, section, article',
+    type: 'rental'
+  },
+  {
+    name: '코웨이 제품 - 정수기',
     url: 'https://www.coway.com/product/water-purifier',
     selector: 'div, p, span, a, section, article',
     type: 'product'
   },
   {
-    name: '코웨이 제품 페이지 - 공기청정기',
+    name: '코웨이 제품 - 공기청정기',
     url: 'https://www.coway.com/product/air-purifier',
     selector: 'div, p, span, a, section, article',
     type: 'product'
-  },
-  {
-    name: '코웨이 제품 페이지 - 비데',
-    url: 'https://www.coway.com/product/bidet',
-    selector: 'div, p, span, a, section, article',
-    type: 'product'
-  },
-  {
-    name: '코웨이 제품 페이지 - 매트리스',
-    url: 'https://www.coway.com/product/mattress',
-    selector: 'div, p, span, a, section, article',
-    type: 'product'
-  },
-  {
-    name: '코웨이 렌탈샵',
-    url: 'https://coway-m.com/',
-    selector: 'div, p, span, a, section, article',
-    type: 'rental'
-  },
-  {
-    name: '코웨이 공식 몰',
-    url: 'https://cowaymall.com/',
-    selector: 'div, p, span, a, section, article',
-    type: 'mall'
-  },
-  {
-    name: '코웨이 멤버십',
-    url: 'https://www.coway.com/membership',
-    selector: 'div, p, span, a, section, article',
-    type: 'membership'
-  },
-  {
-    name: '코웨이 케어 서비스',
-    url: 'https://www.coway.com/service',
-    selector: 'div, p, span, a, section, article',
-    type: 'service'
   }
 ];
 

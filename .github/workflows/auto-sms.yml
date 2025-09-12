@@ -26,6 +26,12 @@ jobs:
     - name: 📦 의존성 설치
       run: npm install
       
+    - name: 📅 현재 날짜 설정
+      id: date
+      run: |
+        echo "day=$(date +%A | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+        
     - name: 🔍 프로모션 변경사항 확인
       id: check-changes
       run: |
@@ -45,7 +51,7 @@ jobs:
         node sms-sender.js --emergency
         
     - name: 📢 정기 프로모션 알림 (월요일)
-      if: github.event.schedule && format('{0}', 'monday') == format('{0}', steps.date.outputs.day)
+      if: github.event.schedule && steps.date.outputs.day == 'monday'
       env:
         COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
         COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
@@ -55,7 +61,7 @@ jobs:
         node sms-sender.js --weekly
         
     - name: 🎯 맞춤 프로모션 알림 (수요일)
-      if: github.event.schedule && format('{0}', 'wednesday') == format('{0}', steps.date.outputs.day)
+      if: github.event.schedule && steps.date.outputs.day == 'wednesday'
       env:
         COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
         COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}

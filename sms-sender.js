@@ -36,7 +36,7 @@ function createSMSMessage(promotions, customerName = '') {
   });
   
   message += `\n📱 전체보기: https://comfreec.github.io/coway-promotion-system/`;
-  message += `\n📞 상담문의: 1588-7997`;
+  message += `\n📞 코웨이 공식파트너 손진호: 010-2417-7936`;
   message += `\n\n수신거부: STOP 회신`;
   
   return message;
@@ -72,24 +72,48 @@ function createPersonalizedMessage(promotions, customer) {
   
   message += `\n🎁 ${customer.name}님 전용 추가혜택 문의`;
   message += `\n📱 https://comfreec.github.io/coway-promotion-system/`;
-  message += `\n📞 1588-7997 (${customer.name}님 전용라인)`;
+  message += `\n📞 전담파트너 손진호: 010-2417-7936`;
   
   return message;
 }
 
 /**
- * CoolSMS API를 통한 SMS 발송
+ * CoolSMS API를 통한 SMS/MMS 발송
  */
-async function sendSMS(to, message, from = SMS_CONFIG.sender) {
+async function sendSMS(to, message, from = SMS_CONFIG.sender, withBusinessCard = true) {
   try {
-    const data = {
-      message: {
-        to: to,
-        from: from,
-        text: message,
-        type: 'SMS',
-        country: '82'
+    const fs = require('fs');
+    const path = require('path');
+    
+    let messageData = {
+      to: to,
+      from: from,
+      text: message,
+      type: 'SMS',
+      country: '82'
+    };
+    
+    // 명함 첨부 시 MMS로 변경
+    if (withBusinessCard) {
+      const businessCardPath = path.join(__dirname, 'business-card.png');
+      
+      if (fs.existsSync(businessCardPath)) {
+        const imageData = fs.readFileSync(businessCardPath, { encoding: 'base64' });
+        
+        messageData = {
+          ...messageData,
+          type: 'MMS',
+          files: [{
+            name: 'business-card.png',
+            data: imageData
+          }],
+          subject: '🏠 코웨이 공식파트너 손진호'
+        };
       }
+    }
+    
+    const data = {
+      message: messageData
     };
     
     const response = await axios.post(SMS_CONFIG.baseUrl, data, {
@@ -102,14 +126,15 @@ async function sendSMS(to, message, from = SMS_CONFIG.sender) {
     return {
       success: true,
       messageId: response.data.groupId,
-      message: '문자 발송 성공'
+      message: withBusinessCard ? 'MMS(명함포함) 발송 성공' : 'SMS 발송 성공',
+      type: withBusinessCard ? 'MMS' : 'SMS'
     };
   } catch (error) {
-    console.error('SMS 발송 실패:', error.message);
+    console.error('문자 발송 실패:', error.message);
     return {
       success: false,
       error: error.message,
-      message: '문자 발송 실패'
+      message: withBusinessCard ? 'MMS(명함포함) 발송 실패' : 'SMS 발송 실패'
     };
   }
 }
@@ -190,7 +215,7 @@ async function sendNewPromotionAlert(newPromotions) {
     newPromotions.slice(0, 2).map(promo => 
       `🔥 ${promo.product}\n${promo.benefit.substring(0, 30)}...`
     ).join('\n\n') +
-    `\n\n⏰ 한정수량! 지금 확인하세요\n📱 https://comfreec.github.io/coway-promotion-system/`;
+    `\n\n⏰ 한정수량! 지금 확인하세요\n📱 https://comfreec.github.io/coway-promotion-system/\n📞 손진호: 010-2417-7936`;
   
   // VIP 고객에게만 먼저 발송
   const vipCustomers = CUSTOMER_DB.slice(0, 2);
@@ -285,7 +310,7 @@ async function sendEmergencyAlert(promotions) {
       `🔥 ${promo.product.replace(/[⭐🧊💨⚡🌟🌪️🛏️💳🌸🔥👕💧🏠👶🎓🏢🎊🎯]/g, '')}\n` +
       `${promo.benefit.substring(0, 40)}...`
     ).join('\n\n') +
-    `\n\n⏰ 한정 수량! 지금 바로 확인\n📞 1588-7997 (긴급 상담라인)`;
+    `\n\n⏰ 한정 수량! 지금 바로 확인\n📞 손진호: 010-2417-7936`;
   
   // VIP 고객에게만 발송
   const vipCustomers = CUSTOMER_DB.slice(0, Math.min(2, CUSTOMER_DB.length));
