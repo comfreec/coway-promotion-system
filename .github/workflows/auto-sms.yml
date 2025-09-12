@@ -26,6 +26,9 @@ jobs:
     - name: 📦 의존성 설치
       run: npm install
       
+    - name: 🌐 Chrome 브라우저 설치
+      run: npx puppeteer browsers install chrome
+      
     - name: 🕷️ 프로모션 스크래핑 실행
       run: |
         echo "🔄 최신 프로모션 데이터 수집 중..."
