@@ -4,7 +4,10 @@
       "Read(//c/Users/aaa/Documents/카카오톡 받은 파일/**)",
       "Bash(copy:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
