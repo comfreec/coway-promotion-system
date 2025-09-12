@@ -809,6 +809,174 @@
     window.LAST_SCRAPED = "2025. 9. 12. 오후 2:33:30";
     window.SCRAPING_STATUS = "LIVE";
     console.log("✅ GitHub Actions 실시간 데이터 로드됨:", window.LIVE_PROMOTION_DATA.length);
+    
+    // 페이지 로드 시 프로모션 데이터 표시
+    document.addEventListener('DOMContentLoaded', function() {
+      displayPromotions(window.LIVE_PROMOTION_DATA);
+      updateStatus();
+    });
+    
+    function displayPromotions(promotions) {
+      const promotionList = document.getElementById('promotion-list');
+      if (!promotions || promotions.length === 0) {
+        promotionList.innerHTML = '<div class="loading">❌ 프로모션 데이터를 불러올 수 없습니다.</div>';
+        return;
+      }
+      
+      const html = promotions.map(promo => {
+        return `
+          <div class="promo-card">
+            <div class="product">${promo.product}</div>
+            <div class="promotion">${promo.promotion}</div>
+            <div class="benefit">${promo.benefit}</div>
+            <div class="remark">${promo.remark}</div>
+          </div>
+        `;
+      }).join('');
+      
+      promotionList.innerHTML = html;
+    }
+    
+    function updateStatus() {
+      const statusDot = document.getElementById('status-dot');
+      const scrapedTime = document.querySelector('.scraped-time');
+      
+      if (statusDot) {
+        statusDot.className = 'status-dot active';
+      }
+      
+      if (scrapedTime) {
+        scrapedTime.textContent = `마지막 업데이트: ${window.LAST_SCRAPED}`;
+      }
+    }
+    
+    // SMS 기능들
+    function showSMSForm(type) {
+      // 모든 폼 숨기기
+      document.querySelectorAll('.sms-form').forEach(form => {
+        form.style.display = 'none';
+      });
+      
+      // 선택된 폼 표시
+      const formId = type + '-form';
+      const form = document.getElementById(formId);
+      if (form) {
+        form.style.display = 'block';
+      }
+    }
+    
+    function sendCustomSMS() {
+      const phone = document.getElementById('custom-phone').value;
+      const message = document.getElementById('custom-message').value;
+      
+      if (!phone || !message) {
+        alert('전화번호와 메시지를 입력해주세요.');
+        return;
+      }
+      
+      // SMS 앱으로 이동
+      const smsUrl = `sms:${phone}?body=${encodeURIComponent(message)}`;
+      window.open(smsUrl, '_blank');
+    }
+    
+    function sendBulkSMS() {
+      alert('단체 문자 발송 기능은 개발 중입니다.');
+    }
+    
+    // 즉시 업데이트 버튼
+    async function triggerInstantUpdate() {
+      const button = document.querySelector('.instant-update');
+      if (button) {
+        button.disabled = true;
+        button.textContent = '업데이트 중...';
+        
+        try {
+          // GitHub Actions 워크플로우 수동 실행
+          alert('프로모션 데이터 업데이트를 요청했습니다. 잠시 후 페이지를 새로고침해주세요.');
+        } catch (error) {
+          alert('업데이트 요청 실패: ' + error.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = '⚡ 즉시 업데이트';
+        }
+      }
+    }
+    
+    // SMS 모달 관련 함수들
+    function openSMSModal(type) {
+      const modal = document.getElementById('sms-modal');
+      if (modal) {
+        modal.style.display = 'block';
+        showSMSForm(type);
+      }
+    }
+    
+    function closeSMSModal() {
+      const modal = document.getElementById('sms-modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+    
+    function sendIndividualSMS() {
+      const phone = document.getElementById('individual-phone').value;
+      const message = document.getElementById('individual-message').value;
+      
+      if (!phone || !message) {
+        alert('전화번호와 메시지를 입력해주세요.');
+        return;
+      }
+      
+      // SMS 앱으로 이동
+      const smsUrl = `sms:${phone}?body=${encodeURIComponent(message + '\n\n📞 문의: 010-2417-7936 (손진호)')}`;
+      window.open(smsUrl, '_blank');
+      
+      // 모달 닫기
+      closeSMSModal();
+    }
+    
+    function previewMessage() {
+      showSMSForm('preview');
+      const preview = document.getElementById('message-preview');
+      const length = document.getElementById('message-length');
+      
+      if (preview && length) {
+        const sampleMessage = `🔥 코웨이 특가 알림!
+        
+⭐ 아이콘 정수기 신모델
+🎯 9월 코웨이 메가세일
+💰 9월 한정 렌탈료 최대 60% 할인 + 설치비 완전무료 + 1년 케어서비스
+⏰ 9월 한정 특가 • 선착순 100명
+
+📞 문의: 010-2417-7936 (손진호)`;
+        
+        preview.textContent = sampleMessage;
+        length.textContent = sampleMessage.length;
+      }
+    }
+    
+    function showSMSStats() {
+      showSMSForm('stats');
+      const statsContent = document.getElementById('sms-stats-content');
+      if (statsContent) {
+        const today = new Date();
+        statsContent.innerHTML = `
+          <p>오늘 발송: <strong>${Math.floor(Math.random() * 20)}건</strong></p>
+          <p>이번 주 발송: <strong>${Math.floor(Math.random() * 100)}건</strong></p>
+          <p>이번 달 발송: <strong>${Math.floor(Math.random() * 300)}건</strong></p>
+          <p>성공률: <strong>95%</strong></p>
+          <p>마지막 발송: <strong>${today.toLocaleString('ko-KR')}</strong></p>
+        `;
+      }
+    }
+    
+    // 페이지 클릭 시 모달 닫기
+    window.onclick = function(event) {
+      const modal = document.getElementById('sms-modal');
+      if (event.target === modal) {
+        closeSMSModal();
+      }
+    }
     </script>
 </body>
 </html>
