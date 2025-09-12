@@ -298,10 +298,10 @@ async function scrapePromotions() {
     console.log(`📊 수집된 실제 프로모션: ${uniquePromotions.length}개`);
   }
   
-  // 우선순위 기준으로 정렬 (최대 20개)
+  // 우선순위 기준으로 정렬 (최대 6개로 제한 - 성능 최적화)
   const finalPromotions = uniquePromotions
     .sort((a, b) => b.priority - a.priority)
-    .slice(0, 20);
+    .slice(0, 6);
   
   console.log(`🎉 총 ${finalPromotions.length}개 고가치 프로모션 수집 완료`);
   
