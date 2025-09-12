@@ -1112,7 +1112,7 @@
       });
       
       message += `\n📱 전체보기: https://comfreec.github.io/coway-promotion-system/`;
-      message += `\n📞 상담문의: 1588-7997`;
+      message += `\n📞 코웨이 공식파트너 손진호: 010-2417-7936`;
       message += `\n\n수신거부: STOP 회신`;
       
       return message;
@@ -1189,6 +1189,14 @@
       document.getElementById('bulk-preview').textContent = message;
     }
 
+    // 명함 다운로드 및 첨부 안내 함수
+    function downloadBusinessCard() {
+      const link = document.createElement('a');
+      link.href = 'business-card.png';
+      link.download = 'coway-business-card.png';
+      link.click();
+    }
+
     function sendIndividualSMS() {
       const customerPhone = document.getElementById('customer-phone').value;
       const promotionSelect = document.getElementById('promotion-select').value;
@@ -1224,18 +1232,41 @@
       // 모바일과 데스크톱 환경 구분
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
-      if (isMobile) {
-        // 모바일: 바로 문자 앱 열기 (알림 제거)
-        window.location.href = smsUrl;
-      } else {
-        // 데스크톱: 문자 내용을 복사할 수 있도록 표시
-        if (confirm(`💻 데스크톱에서는 문자 내용을 복사하여 직접 발송해주세요.\n\n받는 사람: ${cleanPhone}\n\n문자 내용을 클립보드에 복사하시겠습니까?`)) {
-          navigator.clipboard.writeText(message).then(() => {
-            alert('📋 문자 내용이 클립보드에 복사되었습니다!\n휴대폰으로 직접 발송해주세요.');
-          }).catch(() => {
-            // 클립보드 복사 실패시 텍스트로 표시
-            prompt('📋 아래 내용을 복사해서 문자로 발송해주세요:', message);
+      // 명함 첨부 안내
+      const includeBusinessCard = confirm('📇 손진호 공식파트너 명함을 함께 전송하시겠습니까?\n\n"확인"을 누르시면 명함 이미지가 다운로드되고 문자앱이 열립니다.');
+      
+      if (includeBusinessCard) {
+        downloadBusinessCard();
+        
+        if (isMobile) {
+          // 모바일: 명함 안내 후 문자 앱 열기
+          setTimeout(() => {
+            alert('📇 명함 이미지를 문자에 첨부해서 MMS로 보내세요!\n\n1. 문자 작성 화면에서 📎 버튼 클릭\n2. 다운로드된 명함 이미지 선택\n3. 전송');
+            window.location.href = smsUrl;
+          }, 1000);
+        } else {
+          // 데스크톱: 상세 안내
+          alert(`📱 다음 순서로 진행하세요:\n\n1. 📇 명함 이미지가 다운로드됨\n2. 휴대폰 문자앱으로 ${cleanPhone}에게 메시지 작성\n3. 📎 첨부 버튼으로 명함 이미지 추가\n4. MMS로 전송\n\n💬 메시지 내용:\n${message}`);
+          
+          // 클립보드에 복사
+          navigator.clipboard.writeText(message).catch(() => {
+            console.log('클립보드 복사 실패');
           });
+        }
+      } else {
+        if (isMobile) {
+          // 모바일: 바로 문자 앱 열기
+          window.location.href = smsUrl;
+        } else {
+          // 데스크톱: 문자 내용을 복사할 수 있도록 표시
+          if (confirm(`💻 데스크톱에서는 문자 내용을 복사하여 직접 발송해주세요.\n\n받는 사람: ${cleanPhone}\n\n문자 내용을 클립보드에 복사하시겠습니까?`)) {
+            navigator.clipboard.writeText(message).then(() => {
+              alert('📋 문자 내용이 클립보드에 복사되었습니다!\n휴대폰으로 직접 발송해주세요.');
+            }).catch(() => {
+              // 클립보드 복사 실패시 텍스트로 표시
+              prompt('📋 아래 내용을 복사해서 문자로 발송해주세요:', message);
+            });
+          }
         }
       }
       
@@ -1251,6 +1282,14 @@
       
       if (!confirm(`등록된 ${customerDB.length}명의 고객에게 문자를 발송하시겠습니까?\n(각각의 문자 앱이 열립니다)`)) {
         return;
+      }
+      
+      // 명함 첨부 여부 확인
+      const includeBusinessCard = confirm('📇 모든 고객에게 손진호 공식파트너 명함을 함께 전송하시겠습니까?\n\n"확인"을 누르시면 명함 이미지가 다운로드됩니다.');
+      
+      if (includeBusinessCard) {
+        downloadBusinessCard();
+        alert('📇 명함 이미지가 다운로드되었습니다!\n각 문자 발송시 명함을 첨부해서 MMS로 보내세요.');
       }
       
       const message = createSMSMessage(window.LIVE_PROMOTION_DATA.slice(0, 3));
