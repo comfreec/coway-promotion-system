@@ -3,31 +3,19 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// 스크래핑할 사이트들 (공식 사이트만 - 더 정확한 URL과 셀렉터)
+// 스크래핑할 사이트들 (공식 사이트만 - 안정적인 접근)
 const SCRAPE_TARGETS = [
   {
     name: '코웨이 공식 홈페이지',
-    url: 'https://www.coway.com/kr/',
-    selectors: ['.main-banner', '.promotion-area', '.event-area', '.product-area', '.notice'],
+    url: 'https://www.coway.com/',
+    selectors: ['div', 'section', 'article', 'p', 'span', 'h1', 'h2', 'h3', 'li'],
     type: 'official'
   },
   {
     name: '코웨이 이벤트 페이지',
-    url: 'https://www.coway.com/kr/event',
-    selectors: ['.event-list', '.event-item', '.promotion-item', '.banner'],
+    url: 'https://www.coway.com/event',
+    selectors: ['div', 'section', 'article', 'p', 'span', 'h1', 'h2', 'h3', 'li'],
     type: 'event'
-  },
-  {
-    name: '코웨이 프로모션 페이지',
-    url: 'https://www.coway.com/kr/promotion',
-    selectors: ['.promotion-list', '.promo-item', '.discount-info', '.benefit'],
-    type: 'promotion'
-  },
-  {
-    name: '코웨이 제품 - 정수기',
-    url: 'https://www.coway.com/kr/product/water-purifier',
-    selectors: ['.product-list', '.product-item', '.price-info', '.promotion-badge'],
-    type: 'product'
   }
 ];
 
@@ -146,83 +134,99 @@ async function scrapePromotions() {
         });
       });
       
-      // 다양한 셀렉터로 데이터 추출
+      // 모든 텍스트 요소 분석
       const promotions = await page.evaluate((selectors, targetName, highValueKeywords, productIcons) => {
         const results = [];
         const processedTexts = new Set();
         
-        // 각 셀렉터로 요소 찾기
-        selectors.forEach(selector => {
-          const elements = Array.from(document.querySelectorAll(selector));
-          elements.forEach(element => {
-            const text = element.innerText || element.textContent || '';
-            if (processedTexts.has(text) || text.length < 10) return;
-            processedTexts.add(text);
-            
-            // 프로모션 관련 키워드가 포함된 경우만 처리
-            const hasPromotionKeyword = highValueKeywords.some(group => 
-              group.keywords.some(keyword => text.includes(keyword))
-            );
-            
-            if (hasPromotionKeyword) {
-              let matchedKeywords = [];
-              let totalPriority = 0;
-              let bestEmoji = '🎯';
-              
-              highValueKeywords.forEach(group => {
-                const matched = group.keywords.filter(keyword => text.includes(keyword));
-                if (matched.length > 0) {
-                  matchedKeywords.push(...matched);
-                  totalPriority += group.priority * matched.length;
-                  bestEmoji = group.emoji;
-                }
-              });
-              
-              // 제품명 추출
-              const productKeywords = ['정수기', '공기청정기', '비데', '매트리스', '안마의자', '제습기', '연수기'];
-              let product = '코웨이 제품';
-              let productIcon = '🏠';
-              
-              for (const keyword of productKeywords) {
-                if (text.includes(keyword)) {
-                  product = keyword;
-                  productIcon = productIcons[keyword] || '🏠';
-                  break;
-                }
+        // 페이지의 모든 텍스트 수집
+        const allText = document.body.innerText || document.body.textContent || '';
+        console.log('페이지 텍스트 길이:', allText.length);
+        
+        // 텍스트를 문장 단위로 분리
+        const sentences = allText.split(/[.!?\n]/).filter(s => s.trim().length > 10);
+        console.log('문장 수:', sentences.length);
+        
+        sentences.forEach(sentence => {
+          const text = sentence.trim();
+          if (processedTexts.has(text) || text.length < 15) return;
+          processedTexts.add(text);
+          
+          // 프로모션 관련 키워드 검사
+          let matchedKeywords = [];
+          let totalPriority = 0;
+          let bestEmoji = '🎯';
+          
+          // 할인, 무료, 이벤트 등의 키워드 찾기
+          const promotionIndicators = [
+            /\d+%\s*할인/g,
+            /무료/g,
+            /이벤트/g,
+            /프로모션/g,
+            /특가/g,
+            /세일/g,
+            /렌탈료/g,
+            /\d+개월/g,
+            /증정/g,
+            /할인/g
+          ];
+          
+          const foundIndicators = promotionIndicators.some(regex => regex.test(text));
+          
+          if (foundIndicators) {
+            // 키워드 매칭
+            highValueKeywords.forEach(group => {
+              const matched = group.keywords.filter(keyword => text.includes(keyword));
+              if (matched.length > 0) {
+                matchedKeywords.push(...matched);
+                totalPriority += group.priority * matched.length;
+                bestEmoji = group.emoji;
               }
-              
-              // 프로모션 제목 (첫 번째 줄)
-              const lines = text.split('\n').filter(line => line.trim().length > 3);
-              const promotion = lines[0] ? lines[0].trim().substring(0, 30) : '특별 프로모션';
-              
-              // 혜택 내용
-              let benefit = '';
-              const discountMatch = text.match(/\d+%[^,\n]*/);
-              const freeMatch = text.match(/무료[^,\n]*/);
-              const periodMatch = text.match(/\d+개월[^,\n]*/);
-              
-              const benefits = [];
-              if (discountMatch) benefits.push(discountMatch[0]);
-              if (freeMatch) benefits.push(freeMatch[0]);
-              if (periodMatch) benefits.push(periodMatch[0]);
-              
-              benefit = benefits.join(' + ') || '특별 혜택 제공';
-              
+            });
+            
+            // 제품명 찾기
+            const productKeywords = ['정수기', '공기청정기', '비데', '매트리스', '안마의자', '제습기', '연수기', '아이콘', '노블', '룰루'];
+            let product = '코웨이 제품';
+            let productIcon = '🏠';
+            
+            for (const keyword of productKeywords) {
+              if (text.includes(keyword)) {
+                product = keyword;
+                productIcon = productIcons[keyword] || '🏠';
+                break;
+              }
+            }
+            
+            // 혜택 추출
+            const discountMatch = text.match(/\d+%[^,.]*/);
+            const freeMatch = text.match(/무료[^,.]*/)
+            const monthMatch = text.match(/\d+개월[^,.]*/);
+            
+            const benefits = [];
+            if (discountMatch) benefits.push(discountMatch[0]);
+            if (freeMatch) benefits.push(freeMatch[0]);
+            if (monthMatch) benefits.push(monthMatch[0]);
+            
+            const benefit = benefits.join(' + ') || '특별 혜택';
+            const promotion = text.length > 50 ? text.substring(0, 50) + '...' : text;
+            
+            if (totalPriority > 0 || foundIndicators) {
               results.push({
                 product: productIcon + ' ' + product,
                 promotion: bestEmoji + ' ' + promotion,
                 benefit: benefit,
-                remark: targetName,
+                remark: targetName + ' (실시간)',
                 source: targetName,
-                priority: totalPriority,
-                keywords: matchedKeywords,
+                priority: Math.max(totalPriority, 5),
+                keywords: matchedKeywords.length > 0 ? matchedKeywords : ['프로모션'],
                 scraped: new Date().toISOString()
               });
             }
-          });
+          }
         });
         
-        return results.sort((a, b) => b.priority - a.priority);
+        console.log('추출된 프로모션 수:', results.length);
+        return results.sort((a, b) => b.priority - a.priority).slice(0, 10);
         
       }, target.selectors, target.name, HIGH_VALUE_KEYWORDS, PRODUCT_ICONS);
       
